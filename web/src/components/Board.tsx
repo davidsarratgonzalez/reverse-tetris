@@ -9,7 +9,7 @@ interface BoardProps {
 }
 
 export function Board({ view }: BoardProps) {
-  const { boardCells, activePiece, ghostY, clearingLines } = view;
+  const { boardCells, activePiece, ghostY, clearingLines, collapseShifts } = view;
   const w = BOARD_WIDTH;
   const h = BOARD_HEIGHT;
   const cellSize = CELL_SIZE;
@@ -56,29 +56,62 @@ export function Board({ view }: BoardProps) {
           const light = PIECE_COLORS_LIGHT[piece];
           const dark = PIECE_COLORS_DARK[piece];
 
+          // Flash phase: clearing rows blink white
+          if (isClearing) {
+            return (
+              <g key={idx}>
+                <rect
+                  x={x} y={svgY} width={1} height={1}
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth={0.06}
+                >
+                  <animate
+                    attributeName="fill"
+                    values={`#ffffff;${color};#ffffff;${color};#ffffff`}
+                    dur="0.3s"
+                    repeatCount="indefinite"
+                  />
+                </rect>
+              </g>
+            );
+          }
+
+          // Collapse phase: rows above cleared lines drop down
+          const shift = collapseShifts?.[boardY] ?? 0;
+          if (shift > 0) {
+            return (
+              <g key={idx}>
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  from={`0 ${-shift}`}
+                  to="0 0"
+                  dur="0.2s"
+                  fill="freeze"
+                />
+                <rect
+                  x={x} y={svgY} width={1} height={1}
+                  fill={color}
+                  stroke={dark}
+                  strokeWidth={0.06}
+                />
+                <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
+                <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
+              </g>
+            );
+          }
+
           return (
             <g key={idx}>
               <rect
                 x={x} y={svgY} width={1} height={1}
-                fill={isClearing ? 'var(--flash-color)' : color}
+                fill={color}
                 stroke={dark}
                 strokeWidth={0.06}
-              >
-                {isClearing && (
-                  <animate
-                    attributeName="opacity"
-                    values="1;0.3;1"
-                    dur="0.3s"
-                    repeatCount="2"
-                  />
-                )}
-              </rect>
-              {!isClearing && (
-                <>
-                  <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
-                  <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
-                </>
-              )}
+              />
+              <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
+              <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
             </g>
           );
         })}

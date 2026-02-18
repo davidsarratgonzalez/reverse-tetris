@@ -10,4 +10,5 @@ export const MOVE_DELAY = 60;    // horizontal move
 export const ROTATE_DELAY = 80;  // rotation
 export const DROP_DELAY = 35;    // soft drop (1 cell)
 export const LOCK_DELAY = 200;   // pause before locking
-export const LINE_CLEAR_DELAY = 350;
+export const LINE_FLASH_DELAY = 300;    // white flash on full rows
+export const LINE_COLLAPSE_DELAY = 250; // rows dropping down

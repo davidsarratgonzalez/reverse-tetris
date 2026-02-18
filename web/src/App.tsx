@@ -34,11 +34,13 @@ export function App() {
       ? 'Bot is thinking...'
       : view.phase === 'BOT_ANIMATING'
         ? 'Bot is playing...'
-        : view.phase === 'PICKING_FIRST' || view.phase === 'PICKING_SECOND'
-          ? 'Your turn'
-          : view.phase === 'WAITING_FOR_PLAYER'
-            ? 'Pick the next piece!'
-            : '';
+        : view.phase === 'LINE_CLEARING'
+          ? 'Lines cleared!'
+          : view.phase === 'PICKING_FIRST' || view.phase === 'PICKING_SECOND'
+            ? 'Your turn'
+            : view.phase === 'WAITING_FOR_PLAYER'
+              ? 'Pick the next piece!'
+              : '';
 
   return (
     <div className="game-layout">

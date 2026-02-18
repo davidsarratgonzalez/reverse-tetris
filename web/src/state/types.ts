@@ -8,6 +8,7 @@ export type GamePhase =
   | 'PICKING_SECOND'
   | 'BOT_THINKING'
   | 'BOT_ANIMATING'
+  | 'LINE_CLEARING'
   | 'WAITING_FOR_PLAYER'
   | 'GAME_OVER';
 
@@ -32,8 +33,10 @@ export interface ViewState {
   // Score
   scoreState: ScoreState;
   piecesPlaced: number;
-  // Line clear flash
+  // Line clear animation: flash phase (row indices that are full)
   clearingLines: number[] | null;
+  // Line clear animation: collapse phase (per-row shift distances)
+  collapseShifts: number[] | null;
   // Game over flag
   gameOver: boolean;
 }

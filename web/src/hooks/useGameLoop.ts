@@ -8,7 +8,8 @@ import {
   ROTATE_DELAY,
   DROP_DELAY,
   LOCK_DELAY,
-  LINE_CLEAR_DELAY,
+  LINE_FLASH_DELAY,
+  LINE_COLLAPSE_DELAY,
   BOARD_WIDTH,
   BOARD_HEIGHT,
 } from '@web/utils/constants';
@@ -22,6 +23,8 @@ import {
   pickNextPiece,
   applyAnimationFrame,
   applyPlacement,
+  extractBoardCells,
+  computeCollapseShifts,
   type EngineRefs,
 } from '@web/state/reducer';
 
@@ -119,10 +122,34 @@ export function useGameLoop(): GameControls {
         setView(finalView);
 
         if (finalView.clearingLines && finalView.clearingLines.length > 0) {
+          const clearedRows = finalView.clearingLines;
+
+          // Phase 1 → Phase 2: after flash, start collapse
           timerRef.current = setTimeout(() => {
             if (genRef.current !== gen) return;
-            setView(prev => ({ ...prev, clearingLines: null }));
-          }, LINE_CLEAR_DELAY / speedRef.current);
+
+            // Switch to post-clear board + collapse animation
+            const cb = engineRefs.current.colorBoard;
+            const postClearCells = cb ? extractBoardCells(cb) : finalView.boardCells;
+            const shifts = computeCollapseShifts(clearedRows, BOARD_HEIGHT);
+
+            setView(prev => ({
+              ...prev,
+              clearingLines: null,
+              boardCells: postClearCells,
+              collapseShifts: shifts,
+            }));
+
+            // Phase 2 → Done: after collapse, ready for next piece
+            timerRef.current = setTimeout(() => {
+              if (genRef.current !== gen) return;
+              setView(prev => ({
+                ...prev,
+                collapseShifts: null,
+                phase: 'WAITING_FOR_PLAYER',
+              }));
+            }, LINE_COLLAPSE_DELAY / speedRef.current);
+          }, LINE_FLASH_DELAY / speedRef.current);
         }
         return;
       }

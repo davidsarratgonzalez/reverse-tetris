@@ -34,11 +34,12 @@ export function createInitialView(): ViewState {
     scoreState: initialScore(),
     piecesPlaced: 0,
     clearingLines: null,
+    collapseShifts: null,
     gameOver: false,
   };
 }
 
-function extractBoardCells(colorBoard: ColorBoard): (Piece | null)[] {
+export function extractBoardCells(colorBoard: ColorBoard): (Piece | null)[] {
   const cells: (Piece | null)[] = [];
   // Only visible rows (0 to BOARD_HEIGHT-1), row 0 = bottom
   for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -84,6 +85,7 @@ function getViewFromEngine(
     scoreState,
     piecesPlaced,
     clearingLines,
+    collapseShifts: null,
     gameOver: game.gameOver,
   };
 }
@@ -185,28 +187,19 @@ export function applyPlacement(
   // Place on color board
   colorBoard.placePiece(placement.piece, placement.rotation, placement.x, placement.y);
 
-  // Apply in engine
+  // Apply in engine (clears lines internally)
   const result = game.applyPlacement(placement);
 
   if (result.gameOver) {
     return getViewFromEngine(refs, 'GAME_OVER', currentScore, currentPiecesPlaced, null);
   }
 
-  let newScore = currentScore;
-  let clearingLines: number[] | null = null;
+  const newPiecesPlaced = currentPiecesPlaced + 1;
 
   if (result.linesCleared > 0) {
-    // Find cleared rows from colorBoard before sync
-    // After engine clears, colorBoard is stale. We identify full rows pre-clear
-    // by checking the colorBoard for rows that are entirely non-null
-    // Actually, engine already cleared. We need to rebuild.
-    // Simpler: just figure out which rows were cleared based on the placement
-    // and rebuild colorBoard from the engine board.
-    newScore = applyLineClears(currentScore, result.linesCleared);
+    const newScore = applyLineClears(currentScore, result.linesCleared);
 
-    // Identify cleared row indices for flash effect
-    // Since we placed the piece on colorBoard but haven't cleared it yet,
-    // we can detect full rows
+    // Detect full rows BEFORE clearing the colorBoard
     const fullRows: number[] = [];
     for (let y = 0; y < BOARD_HEIGHT + BUFFER_ROWS; y++) {
       let full = true;
@@ -218,17 +211,39 @@ export function applyPlacement(
       }
       if (full) fullRows.push(y);
     }
-    clearingLines = fullRows;
 
-    // Now sync colorBoard
+    // Snapshot the pre-clear board for the flash animation
+    const preClearCells = extractBoardCells(colorBoard);
+
+    // Now collapse the colorBoard to match the engine
     colorBoard.clearLines(fullRows);
     colorBoard.syncWithBoard(game.board);
-  } else {
-    colorBoard.syncWithBoard(game.board);
+
+    // Return view with PRE-clear cells so the flash highlights the right rows
+    const view = getViewFromEngine(refs, 'LINE_CLEARING', newScore, newPiecesPlaced, fullRows);
+    view.boardCells = preClearCells;
+    return view;
   }
 
-  const newPiecesPlaced = currentPiecesPlaced + 1;
-  const nextPhase: GamePhase = result.gameOver ? 'GAME_OVER' : 'WAITING_FOR_PLAYER';
+  colorBoard.syncWithBoard(game.board);
+  return getViewFromEngine(refs, 'WAITING_FOR_PLAYER', currentScore, newPiecesPlaced, null);
+}
 
-  return getViewFromEngine(refs, nextPhase, newScore, newPiecesPlaced, clearingLines);
+/**
+ * Compute per-row collapse shifts: for each post-clear row,
+ * how many rows it needs to "fall" visually.
+ */
+export function computeCollapseShifts(
+  clearedRows: number[],
+  boardHeight: number,
+): number[] {
+  const clearedSet = new Set(clearedRows);
+  const shifts: number[] = new Array(boardHeight).fill(0);
+  let writeRow = 0;
+  for (let readRow = 0; readRow < boardHeight; readRow++) {
+    if (clearedSet.has(readRow)) continue;
+    shifts[writeRow] = readRow - writeRow;
+    writeRow++;
+  }
+  return shifts;
 }
