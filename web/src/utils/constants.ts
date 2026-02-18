@@ -5,7 +5,9 @@ export const CELL_SIZE = 28;
 export const PREVIEW_CELL_SIZE = 20;
 export const SELECTOR_CELL_SIZE = 24;
 
-// Animation timing (ms)
-export const BASE_FRAME_DELAY = 80;
-export const LOCK_DELAY = 200;
-export const LINE_CLEAR_DELAY = 300;
+// Animation timing per move type (ms) at speed 1x
+export const MOVE_DELAY = 60;    // horizontal move
+export const ROTATE_DELAY = 80;  // rotation
+export const DROP_DELAY = 35;    // soft drop (1 cell)
+export const LOCK_DELAY = 200;   // pause before locking
+export const LINE_CLEAR_DELAY = 350;

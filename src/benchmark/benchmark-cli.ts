@@ -5,9 +5,8 @@ import { runBenchmark, type BenchmarkConfig } from './runner.js';
 
 function parseArgs(): {
   games: number;
-  planner: 'greedy' | 'beam';
-  beamWidth: number;
-  beamDepth: number;
+  planner: 'greedy' | 'expectimax';
+  expectimaxDepth: number;
   randomizer: 'uniform' | 'bag7';
   previewCount: number;
   allowHold: boolean;
@@ -18,12 +17,11 @@ function parseArgs(): {
   const args = process.argv.slice(2);
   const opts = {
     games: 100,
-    planner: 'greedy' as 'greedy' | 'beam',
-    beamWidth: 50,
-    beamDepth: 3,
+    planner: 'greedy' as 'greedy' | 'expectimax',
+    expectimaxDepth: 2,
     randomizer: 'bag7' as 'uniform' | 'bag7',
-    previewCount: 5,
-    allowHold: true,
+    previewCount: 1,
+    allowHold: false,
     maxPieces: 500_000,
     seed: 0,
     weightsPath: undefined as string | undefined,
@@ -38,15 +36,11 @@ function parseArgs(): {
         i++;
         break;
       case '--planner':
-        opts.planner = next as 'greedy' | 'beam';
+        opts.planner = next as 'greedy' | 'expectimax';
         i++;
         break;
-      case '--beam-width':
-        opts.beamWidth = parseInt(next!, 10);
-        i++;
-        break;
-      case '--beam-depth':
-        opts.beamDepth = parseInt(next!, 10);
+      case '--depth':
+        opts.expectimaxDepth = parseInt(next!, 10);
         i++;
         break;
       case '--randomizer':
@@ -57,8 +51,8 @@ function parseArgs(): {
         opts.previewCount = parseInt(next!, 10);
         i++;
         break;
-      case '--no-hold':
-        opts.allowHold = false;
+      case '--hold':
+        opts.allowHold = true;
         break;
       case '--max-pieces':
         opts.maxPieces = parseInt(next!, 10);
@@ -85,7 +79,9 @@ async function main(): Promise<void> {
   }
 
   const plannerDesc =
-    opts.planner === 'beam' ? `beam(w=${opts.beamWidth}, d=${opts.beamDepth})` : 'greedy';
+    opts.planner === 'expectimax'
+      ? `expectimax(depth=${opts.expectimaxDepth})`
+      : 'greedy';
 
   console.log(`\nBenchmark: ${opts.games} games | ${plannerDesc} | ${opts.randomizer}`);
   console.log(
@@ -96,8 +92,7 @@ async function main(): Promise<void> {
   const config: BenchmarkConfig = {
     games: opts.games,
     planner: opts.planner,
-    beamWidth: opts.beamWidth,
-    beamDepth: opts.beamDepth,
+    expectimaxDepth: opts.expectimaxDepth,
     randomizer: opts.randomizer,
     previewCount: opts.previewCount,
     allowHold: opts.allowHold,

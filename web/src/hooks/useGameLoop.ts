@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Piece, type Placement } from '@core/types';
 import { BCTS_WEIGHTS } from '@ai/evaluator';
-import { greedySelect } from '@ai/greedy';
+import { expectimaxSelect } from '@ai/expectimax';
 import { planAnimation, type AnimationKeyframe } from '@web/engine/AnimationPlanner';
-import { getAnimationSpeed } from '@web/engine/scoring';
 import {
-  BASE_FRAME_DELAY,
+  MOVE_DELAY,
+  ROTATE_DELAY,
+  DROP_DELAY,
   LOCK_DELAY,
   LINE_CLEAR_DELAY,
   BOARD_WIDTH,
@@ -33,10 +34,20 @@ export interface GameControls {
   setSpeed: (s: number) => void;
 }
 
+function frameDelay(type: AnimationKeyframe['type']): number {
+  switch (type) {
+    case 'move': return MOVE_DELAY;
+    case 'rotate': return ROTATE_DELAY;
+    case 'drop': return DROP_DELAY;
+    case 'lock': return LOCK_DELAY;
+    default: return MOVE_DELAY;
+  }
+}
+
 export function useGameLoop(): GameControls {
   const engineRefs = useRef<EngineRefs>(createEngineRefs());
   const [view, setView] = useState<ViewState>(createInitialView);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(0.5);
 
   // "Latest value" refs for use inside async callbacks
   const viewRef = useRef(view);
@@ -44,17 +55,93 @@ export function useGameLoop(): GameControls {
   const speedRef = useRef(speed);
   speedRef.current = speed;
 
-  // Timer ref — always points to the next scheduled timeout
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Generation counter — incremented on cancel/restart to invalidate stale callbacks
   const genRef = useRef(0);
 
-  const clearTimer = useCallback(() => {
+  // rAF-based animation state
+  const animRef = useRef<{
+    keyframes: AnimationKeyframe[];
+    placement: Placement;
+    frameIndex: number;
+    lastAdvance: number; // timestamp of last frame advance
+    rafId: number;
+    gen: number;
+  } | null>(null);
+
+  // Timeout ref for line-clear delay and AI thinking delay
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelAll = useCallback(() => {
     genRef.current++;
+    if (animRef.current) {
+      cancelAnimationFrame(animRef.current.rafId);
+      animRef.current = null;
+    }
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+  }, []);
+
+  // The core rAF loop: advances one animation frame per elapsed delay,
+  // guaranteeing each position is rendered for at least one display frame.
+  const startAnimLoop = useCallback((
+    keyframes: AnimationKeyframe[],
+    placement: Placement,
+    gen: number,
+  ) => {
+    const anim: NonNullable<typeof animRef.current> = {
+      keyframes,
+      placement,
+      frameIndex: 0,
+      lastAdvance: performance.now(),
+      rafId: 0,
+      gen,
+    };
+    animRef.current = anim;
+
+    // Show first keyframe immediately (spawn)
+    const v = viewRef.current;
+    setView(applyAnimationFrame(engineRefs.current, keyframes[0]!, v.scoreState, v.piecesPlaced));
+    anim.frameIndex = 1;
+
+    const loop = (timestamp: number) => {
+      // Check if cancelled
+      if (genRef.current !== anim.gen) return;
+
+      const currentFrame = anim.keyframes[anim.frameIndex];
+
+      // All keyframes shown — commit placement to engine
+      if (!currentFrame) {
+        const v = viewRef.current;
+        const finalView = applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced);
+        animRef.current = null;
+        setView(finalView);
+
+        if (finalView.clearingLines && finalView.clearingLines.length > 0) {
+          timerRef.current = setTimeout(() => {
+            if (genRef.current !== gen) return;
+            setView(prev => ({ ...prev, clearingLines: null }));
+          }, LINE_CLEAR_DELAY / speedRef.current);
+        }
+        return;
+      }
+
+      // Check if enough time has elapsed to advance one frame
+      const targetDelay = frameDelay(currentFrame.type) / speedRef.current;
+      const elapsed = timestamp - anim.lastAdvance;
+
+      if (elapsed >= targetDelay) {
+        const v = viewRef.current;
+        setView(applyAnimationFrame(engineRefs.current, currentFrame, v.scoreState, v.piecesPlaced));
+        anim.frameIndex++;
+        anim.lastAdvance = timestamp;
+      }
+
+      anim.rafId = requestAnimationFrame(loop);
+    };
+
+    anim.rafId = requestAnimationFrame(loop);
   }, []);
 
   // AI thinking effect
@@ -64,14 +151,13 @@ export function useGameLoop(): GameControls {
     const game = engineRefs.current.game;
     if (!game) return;
 
-    // Capture generation so we can detect cancellation
     const gen = genRef.current;
 
     const id = setTimeout(() => {
-      if (genRef.current !== gen) return; // cancelled
+      if (genRef.current !== gen) return;
 
       const snapshot = game.snapshot();
-      const placement = greedySelect(snapshot, BCTS_WEIGHTS);
+      const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 2 });
 
       if (!placement) {
         setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
@@ -81,75 +167,25 @@ export function useGameLoop(): GameControls {
       const keyframes = planAnimation(game.board, placement, BOARD_WIDTH, BOARD_HEIGHT);
 
       if (keyframes.length === 0) {
-        // No animation, directly apply
         const v = viewRef.current;
         setView(applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced));
         return;
       }
 
-      // Show first keyframe immediately
-      const v = viewRef.current;
-      setView(applyAnimationFrame(engineRefs.current, keyframes[0]!, v.scoreState, v.piecesPlaced));
-
-      // Chain remaining keyframes via timeouts
-      let frameIndex = 1;
-
-      const tick = () => {
-        if (genRef.current !== gen) return; // cancelled
-
-        const v = viewRef.current;
-
-        if (frameIndex >= keyframes.length) {
-          // Animation complete — commit placement to engine
-          const finalView = applyPlacement(
-            engineRefs.current,
-            placement,
-            v.scoreState,
-            v.piecesPlaced,
-          );
-          setView(finalView);
-
-          if (finalView.clearingLines && finalView.clearingLines.length > 0) {
-            timerRef.current = setTimeout(() => {
-              if (genRef.current !== gen) return;
-              setView(prev => ({ ...prev, clearingLines: null }));
-            }, LINE_CLEAR_DELAY);
-          }
-          return;
-        }
-
-        const frame = keyframes[frameIndex]!;
-        setView(applyAnimationFrame(
-          engineRefs.current,
-          frame,
-          v.scoreState,
-          v.piecesPlaced,
-        ));
-
-        frameIndex++;
-
-        const delay = frame.type === 'lock'
-          ? LOCK_DELAY / speedRef.current
-          : getAnimationSpeed(v.scoreState.level, BASE_FRAME_DELAY) / speedRef.current;
-
-        timerRef.current = setTimeout(tick, delay);
-      };
-
-      // Schedule first tick with a frame delay
-      const firstDelay = getAnimationSpeed(v.scoreState.level, BASE_FRAME_DELAY) / speedRef.current;
-      timerRef.current = setTimeout(tick, firstDelay);
+      startAnimLoop(keyframes, placement, gen);
     }, 30);
 
+    timerRef.current = id;
     return () => clearTimeout(id);
-  }, [view.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view.phase, startAnimLoop]);
 
   // Cleanup on unmount
-  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => cancelAll, [cancelAll]);
 
   const onStart = useCallback(() => {
-    clearTimer();
+    cancelAll();
     setView(startGame(engineRefs.current));
-  }, [clearTimer]);
+  }, [cancelAll]);
 
   const onPickPiece = useCallback((piece: Piece) => {
     const v = viewRef.current;
@@ -163,10 +199,10 @@ export function useGameLoop(): GameControls {
   }, []);
 
   const onRestart = useCallback(() => {
-    clearTimer();
+    cancelAll();
     engineRefs.current = createEngineRefs();
     setView(createInitialView());
-  }, [clearTimer]);
+  }, [cancelAll]);
 
   return { view, onStart, onPickPiece, onRestart, speed, setSpeed };
 }

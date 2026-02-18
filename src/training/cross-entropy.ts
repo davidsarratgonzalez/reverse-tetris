@@ -2,6 +2,7 @@ import { Game } from '../core/game.js';
 import type { GameConfig, Placement } from '../core/types.js';
 import type { Weights } from '../ai/evaluator.js';
 import { greedySelect } from '../ai/greedy.js';
+import { expectimaxSelect } from '../ai/expectimax.js';
 
 export interface CEConfig {
   populationSize: number; // N: number of candidate weight vectors per iteration
@@ -15,6 +16,8 @@ export interface CEConfig {
   randomizer: 'uniform' | 'bag7';
   previewCount: number;
   allowHold: boolean;
+  /** Planner depth during evaluation. 1 = greedy (fast), 2 = expectimax depth 2. */
+  evalDepth?: number;
 }
 
 export interface CEIterationResult {
@@ -53,11 +56,15 @@ function playOneGame(
   weights: Weights,
   gameConfig: Partial<GameConfig>,
   maxPieces: number,
+  evalDepth: number,
 ): number {
   const game = new Game(gameConfig);
   while (!game.gameOver && game.piecesPlaced < maxPieces) {
     const snapshot = game.snapshot();
-    const placement: Placement | null = greedySelect(snapshot, weights);
+    const placement: Placement | null =
+      evalDepth <= 1
+        ? greedySelect(snapshot, weights)
+        : expectimaxSelect(snapshot, weights, { depth: evalDepth });
     if (!placement) break;
     game.applyPlacement(placement);
   }
@@ -76,6 +83,7 @@ export function trainCrossEntropy(
   const mu = initialWeights ? [...initialWeights] : new Array(dim).fill(0);
   const sigma2 = new Array(dim).fill(100); // high initial variance
 
+  const evalDepth = config.evalDepth ?? 1;
   const eliteCount = Math.max(1, Math.floor(config.populationSize * config.eliteRatio));
   const history: CEIterationResult[] = [];
 
@@ -105,7 +113,7 @@ export function trainCrossEntropy(
           allowHold: config.allowHold,
           seed: gameSeed,
         };
-        totalLines += playOneGame(w as unknown as Weights, gameConfig, config.maxPiecesPerGame);
+        totalLines += playOneGame(w as unknown as Weights, gameConfig, config.maxPiecesPerGame, evalDepth);
       }
 
       population.push({ weights: w, score: totalLines / config.gamesPerEval });

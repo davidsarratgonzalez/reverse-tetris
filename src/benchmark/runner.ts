@@ -1,15 +1,14 @@
 import { Game } from '../core/game.js';
 import type { GameConfig, Placement } from '../core/types.js';
-import { beamSearch, type BeamSearchConfig } from '../ai/beam-search.js';
+import { expectimaxSelect, type ExpectimaxConfig } from '../ai/expectimax.js';
 import { greedySelect } from '../ai/greedy.js';
 import type { Weights } from '../ai/evaluator.js';
 import { computeStats, type BenchmarkStats } from './stats.js';
 
 export interface BenchmarkConfig {
   games: number;
-  planner: 'greedy' | 'beam';
-  beamWidth: number;
-  beamDepth: number;
+  planner: 'greedy' | 'expectimax';
+  expectimaxDepth: number;
   randomizer: 'uniform' | 'bag7';
   previewCount: number;
   allowHold: boolean;
@@ -35,6 +34,8 @@ export function runBenchmark(
   const decisionTimes: number[] = [];
   const startTime = performance.now();
 
+  const expectimaxConfig: ExpectimaxConfig = { depth: config.expectimaxDepth };
+
   for (let g = 0; g < config.games; g++) {
     const gameConfig: Partial<GameConfig> = {
       randomizer: config.randomizer,
@@ -44,15 +45,14 @@ export function runBenchmark(
     };
 
     const game = new Game(gameConfig);
-    const beamConfig: BeamSearchConfig = { width: config.beamWidth, depth: config.beamDepth };
 
     while (!game.gameOver && game.piecesPlaced < config.maxPiecesPerGame) {
       const snapshot = game.snapshot();
       const decStart = performance.now();
 
       let placement: Placement | null;
-      if (config.planner === 'beam') {
-        placement = beamSearch(snapshot, config.weights, beamConfig, gameConfig);
+      if (config.planner === 'expectimax') {
+        placement = expectimaxSelect(snapshot, config.weights, expectimaxConfig);
       } else {
         placement = greedySelect(snapshot, config.weights);
       }
