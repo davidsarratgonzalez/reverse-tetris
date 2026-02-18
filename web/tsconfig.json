@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@core/*": ["../src/core/*"],
+      "@ai/*": ["../src/ai/*"],
+      "@web/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "../src/core", "../src/ai"]
+}

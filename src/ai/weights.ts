@@ -1,20 +1,9 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { Weights } from './evaluator.js';
+import { BCTS_WEIGHTS, type Weights } from './evaluator.js';
 
-// BCTS default weights (Thiery & Scherrer, 2009)
-// Order: landingHeight, erodedPieceCells, rowTransitions, colTransitions,
-//        holes, cumulativeWells, holeDepth, rowsWithHoles
-export const BCTS_WEIGHTS: Weights = [
-  -12.63, //  landingHeight
-  6.60, //  erodedPieceCells
-  -9.22, //  rowTransitions
-  -19.77, //  colTransitions
-  -13.08, //  holes
-  -10.49, //  cumulativeWells
-  -1.61, //  holeDepth
-  -24.04, //  rowsWithHoles
-];
+// Re-export for backward compatibility
+export { BCTS_WEIGHTS };
 
 export async function loadWeights(path: string): Promise<Weights> {
   const raw = await readFile(path, 'utf-8');

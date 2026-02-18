@@ -2,6 +2,20 @@ import type { FeatureVector } from '../core/types.js';
 
 export type Weights = readonly [number, number, number, number, number, number, number, number];
 
+// BCTS default weights (Thiery & Scherrer, 2009)
+// Order: landingHeight, erodedPieceCells, rowTransitions, colTransitions,
+//        holes, cumulativeWells, holeDepth, rowsWithHoles
+export const BCTS_WEIGHTS: Weights = [
+  -12.63, //  landingHeight
+  6.60, //  erodedPieceCells
+  -9.22, //  rowTransitions
+  -19.77, //  colTransitions
+  -13.08, //  holes
+  -10.49, //  cumulativeWells
+  -1.61, //  holeDepth
+  -24.04, //  rowsWithHoles
+];
+
 export function evaluate(features: FeatureVector, weights: Weights): number {
   return (
     weights[0] * features.landingHeight +
