@@ -1,6 +1,9 @@
 export const BOARD_WIDTH = 10;
 export const BOARD_HEIGHT = 20;
 export const BUFFER_ROWS = 4;
+/** How many buffer rows to render above the playfield */
+export const VISIBLE_BUFFER = BUFFER_ROWS;
+export const TOTAL_RENDER_HEIGHT = BOARD_HEIGHT + VISIBLE_BUFFER;
 export const CELL_SIZE = 28;
 export const PREVIEW_CELL_SIZE = 20;
 export const SELECTOR_CELL_SIZE = 24;

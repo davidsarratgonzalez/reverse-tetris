@@ -1,6 +1,9 @@
 .board-container {
   position: relative;
   line-height: 0;
+  overflow: visible;
+  /* Reserve space above the board for buffer zone cells */
+  margin-top: 56px;
 }
 
 .board-container svg {

@@ -12,6 +12,7 @@ import {
   LINE_COLLAPSE_DELAY,
   BOARD_WIDTH,
   BOARD_HEIGHT,
+  VISIBLE_BUFFER,
 } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
 import {
@@ -27,6 +28,8 @@ import {
   computeCollapseShifts,
   type EngineRefs,
 } from '@web/state/reducer';
+
+const TOTAL_H = BOARD_HEIGHT + VISIBLE_BUFFER;
 
 export interface GameControls {
   view: ViewState;
@@ -117,9 +120,19 @@ export function useGameLoop(): GameControls {
       // All keyframes shown — commit placement to engine
       if (!currentFrame) {
         const v = viewRef.current;
-        const finalView = applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced);
+        let finalView: ViewState;
+        try {
+          finalView = applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced);
+        } catch {
+          // Engine error — transition to game over
+          animRef.current = null;
+          setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
+          return;
+        }
         animRef.current = null;
         setView(finalView);
+
+        if (finalView.phase === 'GAME_OVER') return;
 
         if (finalView.clearingLines && finalView.clearingLines.length > 0) {
           const clearedRows = finalView.clearingLines;
@@ -131,7 +144,7 @@ export function useGameLoop(): GameControls {
             // Switch to post-clear board + collapse animation
             const cb = engineRefs.current.colorBoard;
             const postClearCells = cb ? extractBoardCells(cb) : finalView.boardCells;
-            const shifts = computeCollapseShifts(clearedRows, BOARD_HEIGHT);
+            const shifts = computeCollapseShifts(clearedRows, TOTAL_H);
 
             setView(prev => ({
               ...prev,
@@ -178,13 +191,26 @@ export function useGameLoop(): GameControls {
     const game = engineRefs.current.game;
     if (!game) return;
 
+    // Check if game is already over (safety check)
+    if (game.gameOver) {
+      setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
+      return;
+    }
+
     const gen = genRef.current;
 
     const id = setTimeout(() => {
       if (genRef.current !== gen) return;
 
-      const snapshot = game.snapshot();
-      const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 2 });
+      let placement: Placement | null;
+      try {
+        const snapshot = game.snapshot();
+        placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 2 });
+      } catch {
+        // AI error — transition to game over
+        setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
+        return;
+      }
 
       if (!placement) {
         setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
@@ -195,7 +221,11 @@ export function useGameLoop(): GameControls {
 
       if (keyframes.length === 0) {
         const v = viewRef.current;
-        setView(applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced));
+        try {
+          setView(applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced));
+        } catch {
+          setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
+        }
         return;
       }
 

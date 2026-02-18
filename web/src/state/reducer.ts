@@ -5,7 +5,7 @@ import { HumanRandomizer } from '@web/engine/HumanRandomizer';
 import { ColorBoard } from '@web/engine/ColorBoard';
 import { initialScore, applyLineClears } from '@web/engine/scoring';
 import { getGhostY } from '@web/engine/AnimationPlanner';
-import { BOARD_WIDTH, BOARD_HEIGHT, BUFFER_ROWS } from '@web/utils/constants';
+import { BOARD_WIDTH, BOARD_HEIGHT, BUFFER_ROWS, VISIBLE_BUFFER } from '@web/utils/constants';
 import type { ViewState, GamePhase } from './types';
 import type { Placement } from '@core/types';
 import type { AnimationKeyframe } from '@web/engine/AnimationPlanner';
@@ -22,9 +22,10 @@ export function createEngineRefs(): EngineRefs {
 }
 
 export function createInitialView(): ViewState {
+  const totalH = BOARD_HEIGHT + VISIBLE_BUFFER;
   return {
     phase: 'START_SCREEN',
-    boardCells: new Array(BOARD_WIDTH * BOARD_HEIGHT).fill(null),
+    boardCells: new Array(BOARD_WIDTH * totalH).fill(null),
     boardWidth: BOARD_WIDTH,
     boardHeight: BOARD_HEIGHT,
     activePiece: null,
@@ -41,8 +42,9 @@ export function createInitialView(): ViewState {
 
 export function extractBoardCells(colorBoard: ColorBoard): (Piece | null)[] {
   const cells: (Piece | null)[] = [];
-  // Only visible rows (0 to BOARD_HEIGHT-1), row 0 = bottom
-  for (let y = 0; y < BOARD_HEIGHT; y++) {
+  const totalH = BOARD_HEIGHT + VISIBLE_BUFFER;
+  // All rendered rows (0 to totalH-1), including buffer above playfield
+  for (let y = 0; y < totalH; y++) {
     for (let x = 0; x < BOARD_WIDTH; x++) {
       cells.push(colorBoard.get(x, y));
     }
@@ -60,7 +62,9 @@ function getViewFromEngine(
   const { game, colorBoard } = refs;
   if (!game || !colorBoard) return { ...createInitialView(), phase };
 
-  const activePiece = phase === 'BOT_THINKING' || phase === 'WAITING_FOR_PLAYER'
+  const hideActive = phase === 'BOT_THINKING' || phase === 'WAITING_FOR_PLAYER'
+    || phase === 'GAME_OVER' || phase === 'LINE_CLEARING';
+  const activePiece = hideActive
     ? null
     : {
         piece: game.currentPiece,
@@ -188,7 +192,14 @@ export function applyPlacement(
   colorBoard.placePiece(placement.piece, placement.rotation, placement.x, placement.y);
 
   // Apply in engine (clears lines internally)
-  const result = game.applyPlacement(placement);
+  let result;
+  try {
+    result = game.applyPlacement(placement);
+  } catch {
+    // HumanRandomizer empty or engine error → treat as game over
+    game.gameOver = true;
+    return getViewFromEngine(refs, 'GAME_OVER', currentScore, currentPiecesPlaced, null);
+  }
 
   if (result.gameOver) {
     return getViewFromEngine(refs, 'GAME_OVER', currentScore, currentPiecesPlaced, null);

@@ -1,8 +1,10 @@
 import { Piece, Rotation } from '@core/types';
 import { PIECE_CELLS } from '@core/constants';
 import { PIECE_COLORS, PIECE_COLORS_DARK, PIECE_COLORS_LIGHT } from '@web/utils/pieceColors';
-import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT } from '@web/utils/constants';
+import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT, VISIBLE_BUFFER } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
+
+const TOTAL_H = BOARD_HEIGHT + VISIBLE_BUFFER;
 
 interface BoardProps {
   view: ViewState;
@@ -24,6 +26,7 @@ export function Board({ view }: BoardProps) {
         width={pxW}
         height={pxH}
         viewBox={`0 0 ${w} ${h}`}
+        overflow="visible"
         style={{ display: 'block', background: 'var(--bg-board)' }}
       >
         {/* Grid lines */}
@@ -44,12 +47,13 @@ export function Board({ view }: BoardProps) {
           />
         ))}
 
-        {/* Locked cells */}
+        {/* Locked cells (including buffer rows above playfield) */}
         {boardCells.map((piece, idx) => {
           if (piece === null) return null;
           const x = idx % w;
           const boardY = Math.floor(idx / w); // row 0 = bottom
-          const svgY = h - 1 - boardY; // SVG Y top-down
+          const svgY = h - 1 - boardY; // SVG Y top-down (negative for buffer rows)
+          const inBuffer = boardY >= h;
 
           const isClearing = clearSet?.has(boardY);
           const color = PIECE_COLORS[piece];
@@ -103,7 +107,7 @@ export function Board({ view }: BoardProps) {
           }
 
           return (
-            <g key={idx}>
+            <g key={idx} opacity={inBuffer ? 0.6 : 1}>
               <rect
                 x={x} y={svgY} width={1} height={1}
                 fill={color}
@@ -123,7 +127,8 @@ export function Board({ view }: BoardProps) {
             rotation={activePiece.rotation}
             x={activePiece.x}
             y={ghostY}
-            boardHeight={h}
+            visibleHeight={h}
+            totalHeight={TOTAL_H}
             ghost
           />
         )}
@@ -135,7 +140,8 @@ export function Board({ view }: BoardProps) {
             rotation={activePiece.rotation}
             x={activePiece.x}
             y={activePiece.y}
-            boardHeight={h}
+            visibleHeight={h}
+            totalHeight={TOTAL_H}
           />
         )}
       </svg>
@@ -150,14 +156,16 @@ function ActivePieceCells({
   rotation,
   x: px,
   y: py,
-  boardHeight,
+  visibleHeight,
+  totalHeight,
   ghost,
 }: {
   piece: Piece;
   rotation: Rotation;
   x: number;
   y: number;
-  boardHeight: number;
+  visibleHeight: number;
+  totalHeight: number;
   ghost?: boolean;
 }) {
   const cells = PIECE_CELLS[piece]![rotation]!;
@@ -170,8 +178,8 @@ function ActivePieceCells({
       {cells.map((cell, i) => {
         const bx = px + cell.x;
         const by = py + cell.y;
-        if (by < 0 || by >= boardHeight || bx < 0 || bx >= BOARD_WIDTH) return null;
-        const svgY = boardHeight - 1 - by;
+        if (by < 0 || by >= totalHeight || bx < 0 || bx >= BOARD_WIDTH) return null;
+        const svgY = visibleHeight - 1 - by;
 
         return (
           <g key={i}>
