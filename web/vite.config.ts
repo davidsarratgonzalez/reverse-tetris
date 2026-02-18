@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: resolve(__dirname),
+  base: '/reverse-tetris/',
   plugins: [react()],
   resolve: {
     alias: {
