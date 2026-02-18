@@ -131,6 +131,18 @@ export class Game {
       this.currentX,
       this.currentY,
     );
+
+    // Lock-out: if any cell locks above the visible playfield, game over immediately.
+    // Matches NES Tetris behavior — no cells may exist above the visible area.
+    const visibleH = this.config.height;
+    for (const cell of placedCells) {
+      if (cell.y >= visibleH) {
+        this.gameOver = true;
+        this.piecesPlaced++;
+        return { linesCleared: 0, pieceCellsInCleared: 0, gameOver: true };
+      }
+    }
+
     const { count, rows } = this.board.clearLines();
 
     // Count how many piece cells were in cleared rows
@@ -199,6 +211,7 @@ export class Game {
     rotation: Rotation,
     x: number,
     y: number,
+    visibleHeight?: number,
   ): {
     board: Board;
     linesCleared: number;
@@ -215,6 +228,13 @@ export class Game {
       const by = y + cell.y;
       b.set(bx, by, true);
       landingCells.push({ x: bx, y: by });
+    }
+
+    // Lock-out: reject placements with any cell above the visible playfield
+    if (visibleHeight !== undefined) {
+      for (const cell of landingCells) {
+        if (cell.y >= visibleHeight) return null;
+      }
     }
 
     const { count, rows } = b.clearLines();

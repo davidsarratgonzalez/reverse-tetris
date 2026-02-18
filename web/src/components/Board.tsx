@@ -13,7 +13,7 @@ interface BoardProps {
 export function Board({ view }: BoardProps) {
   const { boardCells, activePiece, ghostY, clearingLines, collapseShifts } = view;
   const w = BOARD_WIDTH;
-  const h = BOARD_HEIGHT;
+  const h = BOARD_HEIGHT; // 20 — standard Tetris playfield
   const cellSize = CELL_SIZE;
   const pxW = w * cellSize;
   const pxH = h * cellSize;
@@ -23,12 +23,15 @@ export function Board({ view }: BoardProps) {
   return (
     <div className="board-container">
       <svg
+        className="board-svg"
         width={pxW}
         height={pxH}
         viewBox={`0 0 ${w} ${h}`}
-        overflow="visible"
-        style={{ display: 'block', background: 'var(--bg-board)' }}
+        style={{ display: 'block' }}
       >
+        {/* Playfield background */}
+        <rect x={0} y={0} width={w} height={h} fill="var(--bg-board)" />
+
         {/* Grid lines */}
         {Array.from({ length: w + 1 }, (_, x) => (
           <line
@@ -52,7 +55,7 @@ export function Board({ view }: BoardProps) {
           if (piece === null) return null;
           const x = idx % w;
           const boardY = Math.floor(idx / w); // row 0 = bottom
-          const svgY = h - 1 - boardY; // SVG Y top-down (negative for buffer rows)
+          const svgY = h - 1 - boardY; // negative for buffer rows → overflows above
           const inBuffer = boardY >= h;
 
           const isClearing = clearSet?.has(boardY);
@@ -107,15 +110,19 @@ export function Board({ view }: BoardProps) {
           }
 
           return (
-            <g key={idx} opacity={inBuffer ? 0.6 : 1}>
+            <g key={idx} opacity={inBuffer ? 0.5 : 1}>
               <rect
                 x={x} y={svgY} width={1} height={1}
                 fill={color}
                 stroke={dark}
                 strokeWidth={0.06}
               />
-              <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
-              <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
+              {!inBuffer && (
+                <>
+                  <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
+                  <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
+                </>
+              )}
             </g>
           );
         })}
@@ -144,9 +151,15 @@ export function Board({ view }: BoardProps) {
             totalHeight={TOTAL_H}
           />
         )}
+
+        {/* Playfield border (top layer) */}
+        <rect
+          x={0} y={0} width={w} height={h}
+          fill="none"
+          stroke="var(--border-color)"
+          strokeWidth={0.12}
+        />
       </svg>
-      {/* Border */}
-      <div className="board-border" />
     </div>
   );
 }

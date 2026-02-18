@@ -644,7 +644,7 @@ describe('S/Z piece stress tests', () => {
         expect(result.piecesPlaced).toBeGreaterThan(30);
         // If not game over, height should be manageable
         if (!result.gameOver) {
-          expect(result.maxHeight).toBeLessThan(H); // not topped out
+          expect(result.maxHeight).toBeLessThan(TOTAL_H); // not topped out
         }
       });
 

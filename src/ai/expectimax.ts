@@ -45,7 +45,7 @@ export function expectimaxSelect(
   let bestPlacement: Placement | null = null;
 
   for (const p of placements) {
-    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y);
+    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height);
     if (!sim) continue;
 
     let value: number;
@@ -112,7 +112,7 @@ function maxNode(
   let best = -Infinity;
 
   for (const p of placements) {
-    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y);
+    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height);
     if (!sim) continue;
 
     let value: number;

@@ -42,18 +42,16 @@ export function extractFeatures(
 
   // Feature 3: Row transitions
   // For each row (up to maxColHeight), count filled↔empty transitions.
-  // Borders (left wall, right wall) count as filled.
+  // Walls are NOT counted as filled — this prevents artificial bias toward
+  // wall-adjacent placements in adversarial scenarios.
   let rowTransitions = 0;
   for (let y = 0; y < maxColHeight; y++) {
-    // Left border (filled) to first cell
-    let prevFilled = true;
-    for (let x = 0; x < w; x++) {
+    let prevFilled = board.get(0, y);
+    for (let x = 1; x < w; x++) {
       const filled = board.get(x, y);
       if (filled !== prevFilled) rowTransitions++;
       prevFilled = filled;
     }
-    // Last cell to right border (filled)
-    if (!prevFilled) rowTransitions++;
   }
 
   // Feature 4: Column transitions
@@ -100,14 +98,23 @@ export function extractFeatures(
   }
 
   // Feature 6: Cumulative wells
-  // A well at column x exists where both neighbors (or wall) are higher than x.
+  // A well at column x exists where both neighbors are higher than x.
+  // Wall columns (0 and w-1) only check their inner neighbor — walls are NOT
+  // treated as infinitely tall columns, preventing artificial incentive to
+  // fill wall-adjacent columns.
   // Well depth = min(leftHeight, rightHeight) - colHeight[x], clamped to >= 0.
   // Cumulative well = 1 + 2 + ... + depth = depth * (depth + 1) / 2
   let cumulativeWells = 0;
   for (let x = 0; x < w; x++) {
-    const leftH = x === 0 ? h : colHeight[x - 1]!;
-    const rightH = x === w - 1 ? h : colHeight[x + 1]!;
-    const depth = Math.min(leftH, rightH) - colHeight[x]!;
+    let minNeighbor: number;
+    if (x === 0) {
+      minNeighbor = colHeight[1]!;
+    } else if (x === w - 1) {
+      minNeighbor = colHeight[w - 2]!;
+    } else {
+      minNeighbor = Math.min(colHeight[x - 1]!, colHeight[x + 1]!);
+    }
+    const depth = minNeighbor - colHeight[x]!;
     if (depth > 0) {
       cumulativeWells += (depth * (depth + 1)) / 2;
     }

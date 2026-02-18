@@ -59,15 +59,15 @@ describe('Feature extraction', () => {
     expect(features.rowsWithHoles).toBe(1); // only row 0 has holes
   });
 
-  it('should count row transitions with borders', () => {
+  it('should count row transitions without wall borders', () => {
     const board = new Board(10, 24);
     // Row 0: [filled, empty, empty, ..., empty]
     board.set(0, 0, true);
-    // Transitions: left_border(filled)->cell0(filled)=0, cell0(filled)->cell1(empty)=1,
-    // cell1(empty)->...->cell9(empty)=0, cell9(empty)->right_border(filled)=1
-    // Total: 2 transitions
+    // Walls are NOT counted as filled.
+    // Transitions: cell0(filled)->cell1(empty)=1, rest are empty=0
+    // Total: 1 transition
     const features = extractFeatures(board, [0], 0, 0);
-    expect(features.rowTransitions).toBe(2);
+    expect(features.rowTransitions).toBe(1);
   });
 
   it('should count column transitions', () => {

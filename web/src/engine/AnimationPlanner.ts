@@ -12,15 +12,12 @@ export interface AnimationKeyframe {
 }
 
 /**
- * Plan a natural-looking, fully legal animation from spawn to target.
+ * Plan a fully legal animation from spawn to target using BFS.
  *
- * Strategy:
- * 1. **Phased path** (most placements): rotate → move horizontally → drop.
- *    This mirrors how a human plays and looks clean.
- * 2. **BFS fallback** (tucks, T-spins, tight spaces): full BFS path-finding
- *    using the same rules as the game engine.
+ * BFS finds the shortest path using the same moves the game engine allows:
+ * left, right, soft drop, rotate CW, rotate CCW (with SRS wall kicks).
  *
- * All moves are validated via board.collides() and tryRotate() with SRS kicks.
+ * Every intermediate position is validated via board.collides() and tryRotate().
  */
 export function planAnimation(
   board: Board,
@@ -31,10 +28,7 @@ export function planAnimation(
   const piece = placement.piece;
   const spawn = getSpawnPosition(piece, boardWidth, boardHeight);
 
-  // Try the natural phased path first, fall back to BFS
-  const path =
-    phasedPath(board, piece, spawn.x, spawn.y, placement.x, placement.y, placement.rotation) ??
-    bfsPath(board, piece, spawn.x, spawn.y, placement.x, placement.y, placement.rotation);
+  const path = bfsPath(board, piece, spawn.x, spawn.y, placement.x, placement.y, placement.rotation);
 
   const frames: AnimationKeyframe[] = [];
 
@@ -69,67 +63,7 @@ export function planAnimation(
   return frames;
 }
 
-// --- Phased path (natural-looking): rotate → move → drop ---
-
-/**
- * Try to build a path using the natural order: rotate, then slide, then drop.
- * Returns null if any phase is blocked (caller should use BFS instead).
- */
-function phasedPath(
-  board: Board,
-  piece: Piece,
-  startX: number,
-  startY: number,
-  targetX: number,
-  targetY: number,
-  targetRot: Rotation,
-): BfsStep[] | null {
-  const steps: BfsStep[] = [];
-  let x = startX;
-  let y = startY;
-  let rot = Rotation.R0;
-
-  // Phase 1: Rotate to target rotation (shortest direction)
-  const cwSteps = ((targetRot - rot) + 4) % 4;
-  const ccwSteps = ((rot - targetRot) + 4) % 4;
-
-  if (cwSteps <= ccwSteps) {
-    for (let i = 0; i < cwSteps; i++) {
-      const result = tryRotate(board, piece, rot, 1, x, y);
-      if (!result) return null;
-      x = result.x; y = result.y; rot = result.rotation;
-      steps.push({ x, y, rot, move: 'rotateCW' });
-    }
-  } else {
-    for (let i = 0; i < ccwSteps; i++) {
-      const result = tryRotate(board, piece, rot, -1, x, y);
-      if (!result) return null;
-      x = result.x; y = result.y; rot = result.rotation;
-      steps.push({ x, y, rot, move: 'rotateCCW' });
-    }
-  }
-
-  // Phase 2: Move horizontally to target column
-  while (x !== targetX) {
-    const goingRight = x < targetX;
-    const nx = x + (goingRight ? 1 : -1);
-    if (board.collides(piece, rot, nx, y)) return null;
-    x = nx;
-    steps.push({ x, y, rot, move: goingRight ? 'right' : 'left' });
-  }
-
-  // Phase 3: Drop straight down to target row
-  while (y !== targetY) {
-    const ny = y - 1;
-    if (board.collides(piece, rot, x, ny)) return null;
-    y = ny;
-    steps.push({ x, y, rot, move: 'drop' });
-  }
-
-  return steps;
-}
-
-// --- BFS path-finding (fallback for complex placements) ---
+// --- BFS path-finding ---
 
 interface BfsNode {
   x: number;
