@@ -19,10 +19,13 @@
 }
 
 .nes-value {
-  font-size: 16px;
+  font-size: 13px;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .nes-btn {
