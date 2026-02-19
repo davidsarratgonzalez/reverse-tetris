@@ -71,8 +71,8 @@ export function App() {
 
   return (
     <div className="game-layout">
-      {/* Left panel */}
-      <div className="side-panel side-panel--left">
+      {/* Secondary panel (left on desktop, below fold on mobile) */}
+      <div className="game-secondary">
         <ScorePanel scoreState={view.scoreState} piecesPlaced={view.piecesPlaced} />
         <SpeedControl speed={speed} setSpeed={setSpeed} />
         <InputDisplay activeInput={view.activeInput} mode={view.mode} />
@@ -82,44 +82,49 @@ export function App() {
         </div>
       </div>
 
-      {/* Center: board + selector */}
-      <div className="center-panel">
-        <div className="phase-indicator">
-          <span className={`phase-text ${view.phase === 'WAITING_FOR_PLAYER' ? 'phase-text--highlight' : ''}`}>
-            {phaseLabel}
-          </span>
-        </div>
-        <Board view={view} />
-        <PieceSelector
-          onPick={onPickPiece}
-          disabled={!canPick}
-          label={selectorLabel}
-          preselected={preselected}
-        />
-      </div>
-
-      {/* Right panel */}
-      <div className="side-panel side-panel--right">
-        <PiecePreview
-          pieces={[displayCurrent]}
-          label="Current"
-          highlightNextPending={view.phase === 'PICKING' && displayCurrent == null}
-        />
-        <PiecePreview
-          pieces={displayPreview}
-          label="Next"
-          highlightNextPending={
-            (view.phase === 'PICKING' && displayCurrent != null) ||
-            view.phase === 'WAITING_FOR_PLAYER'
-          }
-        />
-        {isModern && (
-          <PiecePreview
-            pieces={[view.holdPiece ?? null]}
-            label="Hold"
-            placeholder="-"
+      {/* Main game area (center+right on desktop, grid on mobile) */}
+      <div className="game-main">
+        <div className="center-panel">
+          <div className="phase-indicator">
+            <span className={`phase-text ${view.phase === 'WAITING_FOR_PLAYER' ? 'phase-text--highlight' : ''}`}>
+              {phaseLabel}
+            </span>
+          </div>
+          <Board view={view} />
+          <PieceSelector
+            onPick={onPickPiece}
+            disabled={!canPick}
+            label={selectorLabel}
+            preselected={preselected}
           />
-        )}
+        </div>
+
+        <div className="game-queue">
+          <PiecePreview
+            pieces={[displayCurrent]}
+            label="Current"
+            highlightNextPending={view.phase === 'PICKING' && displayCurrent == null}
+          />
+          <PiecePreview
+            pieces={displayPreview}
+            label="Next"
+            highlightNextPending={
+              (view.phase === 'PICKING' && displayCurrent != null) ||
+              view.phase === 'WAITING_FOR_PLAYER'
+            }
+          />
+          {isModern && (
+            <PiecePreview
+              pieces={[view.holdPiece ?? null]}
+              label="Hold"
+              placeholder="-"
+            />
+          )}
+          {/* Bot input: visible only on mobile (desktop version is in game-secondary) */}
+          <div className="queue-input-mobile">
+            <InputDisplay activeInput={view.activeInput} mode={view.mode} />
+          </div>
+        </div>
       </div>
 
       {/* Game over overlay */}

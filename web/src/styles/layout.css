@@ -1,3 +1,4 @@
+/* ===== Desktop (default) ===== */
 .game-layout {
   display: flex;
   justify-content: center;
@@ -9,7 +10,12 @@
   color: var(--text-primary);
 }
 
-.side-panel {
+/* Transparent wrapper on desktop — children become flex items of game-layout */
+.game-main {
+  display: contents;
+}
+
+.game-secondary {
   display: flex;
   flex-direction: column;
   gap: var(--panel-gap);
@@ -23,6 +29,20 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.game-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap);
+  width: 210px;
+  flex-shrink: 0;
+  padding-top: 36px;
+}
+
+/* Bot input: in game-secondary on desktop, in game-queue on mobile */
+.queue-input-mobile {
+  display: none;
 }
 
 .phase-indicator {
@@ -110,7 +130,7 @@
 }
 
 .start-mode-btn {
-  width: 280px;
+  width: min(280px, calc(100vw - 80px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -118,7 +138,6 @@
   padding: 12px 20px;
   background: rgba(10, 10, 30, 0.75);
   border: 2px solid rgba(224, 224, 224, 0.4);
-  border-radius: 0;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.05s;
 }
@@ -249,64 +268,213 @@
   gap: 10px;
 }
 
-/* Responsive: stack vertically on narrow screens */
+/* ===== Mobile: 2-column game layout ===== */
 @media (max-width: 768px) {
   .game-layout {
     flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 10px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
     min-height: auto;
-    padding-bottom: 20px;
   }
 
+  /* Main game area: stable viewport height (svh = address bar shown, won't resize on scroll) */
+  .game-main {
+    display: grid;
+    grid-template-columns: 1fr 110px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "phase  phase"
+      "board  queue"
+      "select select";
+    height: 100vh;
+    height: 100svh;
+    height: var(--app-h, 100svh);
+    padding: 6px 8px 6px 6px;
+    column-gap: 6px;
+    row-gap: 4px;
+    overflow: hidden;
+    background: var(--bg-primary);
+  }
+
+  /* Break center-panel so children become grid items */
   .center-panel {
-    order: 1;
+    display: contents;
   }
 
-  .side-panel {
+  .phase-indicator {
+    grid-area: phase;
+    height: 18px;
+  }
+
+  .phase-text {
+    font-size: 9px;
+  }
+
+  /* Queue panel: right column, fills space, scrollable if needed */
+  .game-queue {
+    grid-area: queue;
+    width: auto;
+    padding-top: 0;
+    gap: 4px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .game-queue::-webkit-scrollbar { display: none; }
+
+  /* Compact queue panels — fill available width */
+  .game-queue .nes-panel {
+    padding: 4px;
+  }
+
+  .game-queue .nes-label {
+    font-size: 7px;
+    letter-spacing: 0.5px;
+    margin-bottom: 1px;
+  }
+
+  .game-queue .preview-pieces {
+    gap: 2px;
+    margin-top: 3px;
+    align-items: stretch; /* SVGs fill the full panel width */
+  }
+
+  .game-queue .preview-piece {
+    flex: 0 0 28px;
+  }
+
+  .game-queue .preview-empty {
+    flex: 0 0 28px;
+    font-size: 16px;
+  }
+
+  .game-queue .preview-pending {
+    font-size: 14px;
+  }
+
+  /* Compact input display in queue */
+  .game-queue .input-display {
+    margin-top: 2px;
+  }
+
+  .game-queue .input-row {
+    gap: 2px;
+    margin-top: 3px;
+  }
+
+  .game-queue .input-btn {
+    min-height: 22px;
+    padding: 2px 1px;
+  }
+
+  .game-queue .input-btn-symbol {
+    font-size: 10px;
+  }
+
+  .game-queue .input-btn-label {
+    font-size: 5px;
+    margin-top: 1px;
+  }
+
+  /* Bot input: show mobile version in queue, hide desktop version in secondary */
+  .queue-input-mobile {
+    display: block;
+  }
+
+  .game-secondary > .input-display {
+    display: none;
+  }
+
+  /* Selector: compact, no label on mobile */
+  .piece-selector .nes-label {
+    display: none;
+  }
+
+  /* Secondary panel: below the fold */
+  .game-secondary {
+    order: 1;
     width: 100%;
-    max-width: 400px;
+    max-width: 100%;
+    padding: 12px 8px;
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    padding-top: 0;
   }
 
-  .side-panel--left {
-    order: 2;
+  .game-secondary > * {
+    flex: 1 1 auto;
+    min-width: 140px;
+    max-width: 200px;
   }
 
-  .side-panel--right {
-    order: 3;
+  /* Start screen */
+  .start-screen {
+    padding-top: 40px;
   }
 
-  .board-container {
-    width: min(280px, 80vw);
-  }
-
-  .game-over-content {
-    min-width: min(300px, 90vw);
-    max-width: 90vw;
+  .start-title {
+    font-size: 22px;
   }
 }
 
 @media (max-width: 480px) {
-  .game-layout {
-    padding: 8px;
-    gap: 8px;
+  .game-main {
+    grid-template-columns: 1fr 96px;
+    padding: 4px;
+    column-gap: 4px;
+    row-gap: 3px;
   }
 
-  .board-container {
-    width: min(280px, 90vw);
+  .phase-indicator {
+    height: 14px;
+  }
+
+  .phase-text {
+    font-size: 8px;
+  }
+
+  .game-queue {
+    width: auto;
+    gap: 3px;
+  }
+
+  .game-queue .nes-panel {
+    padding: 3px;
+  }
+
+  .game-queue .preview-piece {
+    flex: 0 0 22px;
+  }
+
+  .game-queue .preview-empty {
+    flex: 0 0 22px;
+    font-size: 12px;
+  }
+
+  .game-queue .preview-pending {
+    font-size: 10px;
+  }
+
+  .game-queue .input-btn {
+    min-height: 18px;
+  }
+
+  .game-queue .input-btn-symbol {
+    font-size: 9px;
+  }
+
+  .game-queue .input-btn-label {
+    display: none;
   }
 
   .start-screen {
     padding-top: 30px;
   }
 
-  .start-mode-btn {
-    max-width: 90vw;
+  .start-title {
+    font-size: 18px;
   }
 }

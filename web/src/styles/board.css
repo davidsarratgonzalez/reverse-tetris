@@ -6,7 +6,6 @@
 
 .board-svg {
   display: block;
-  border-radius: 2px;
   width: 100%;
   height: auto;
   max-height: calc(100vh - 260px);
@@ -60,28 +59,37 @@
 }
 
 @media (max-width: 768px) {
-  .board-svg {
-    max-height: calc(100vh - 200px);
-    max-height: calc(100dvh - 200px);
+  /*
+   * Calc-based width tries to fill the available viewport height.
+   * max-height: 100% is the safety net — capped by the 1fr grid row,
+   * which is exactly the space left after phase + selector + gaps.
+   * So the board is as large as possible WITHOUT overlapping the selector.
+   */
+  .game-main .board-container {
+    grid-area: board;
+    justify-self: end;
+    min-height: 0;
+    overflow: hidden;
+    /* Width from stable viewport height (--app-h set once from JS on load) */
+    width: calc((100vh - 200px) * var(--board-ratio, 0.5));
+    width: calc((100svh - 120px) * var(--board-ratio, 0.5));
+    width: calc((var(--app-h, 100svh) - 120px) * var(--board-ratio, 0.5));
+    max-width: 100%;
+    /* Grid row (1fr) prevents overflow into selector */
+    max-height: 100%;
+  }
+
+  .game-main .board-svg {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  .board-svg {
-    max-height: calc(100vh - 160px);
-    max-height: calc(100dvh - 160px);
-  }
-
-  .preview-piece {
-    flex: 0 0 40px;
-  }
-
-  .preview-empty {
-    flex: 0 0 40px;
-    font-size: 18px;
-  }
-
-  .preview-pending {
-    font-size: 16px;
+  .game-main .board-container {
+    width: calc((100vh - 180px) * var(--board-ratio, 0.5));
+    width: calc((100svh - 100px) * var(--board-ratio, 0.5));
+    width: calc((var(--app-h, 100svh) - 100px) * var(--board-ratio, 0.5));
   }
 }
