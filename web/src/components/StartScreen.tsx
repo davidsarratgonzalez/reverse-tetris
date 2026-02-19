@@ -14,15 +14,6 @@ const SHADOW_MAP: Record<string, string> = {
   '#f0a000': '#684800',
 };
 
-function randomNoRepeat(colors: string[], count: number): string[] {
-  const result: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const available = colors.filter(c => c !== result[i - 1]);
-    result.push(available[Math.floor(Math.random() * available.length)]!);
-  }
-  return result;
-}
-
 interface StartScreenProps {
   onStart: (mode: GameMode) => void;
 }
@@ -30,7 +21,26 @@ interface StartScreenProps {
 export function StartScreen({ onStart }: StartScreenProps) {
   const bgView = useBackgroundGame();
 
-  const titleColors = useMemo(() => randomNoRepeat(PIECE_COLORS, 13), []);
+  const titleColors = useMemo(() => {
+    // Ensure all 7 colors appear at least once across 13 letters
+    // Place all 7 at random positions, fill rest with no-consecutive-repeat
+    const result: (string | null)[] = new Array(13).fill(null);
+    const shuffled = [...PIECE_COLORS].sort(() => Math.random() - 0.5);
+    // Assign each color to a random unique position
+    const positions = Array.from({ length: 13 }, (_, i) => i).sort(() => Math.random() - 0.5);
+    for (let i = 0; i < 7; i++) {
+      result[positions[i]!] = shuffled[i]!;
+    }
+    // Fill remaining slots with random colors, avoiding consecutive repeats
+    for (let i = 0; i < 13; i++) {
+      if (result[i] !== null) continue;
+      const prev = i > 0 ? result[i - 1] : null;
+      const next = result.slice(i + 1).find(c => c !== null) ?? null;
+      const available = PIECE_COLORS.filter(c => c !== prev && c !== next);
+      result[i] = available[Math.floor(Math.random() * available.length)]!;
+    }
+    return result as string[];
+  }, []);
 
   return (
     <div className="start-screen">
@@ -52,7 +62,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
         </h1>
         <p className="start-tagline">
           You choose the pieces.<br />
-          The bot plays them.
+          The bot plays with them.
         </p>
 
         <div className="mode-select">

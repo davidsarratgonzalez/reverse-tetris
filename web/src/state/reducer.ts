@@ -202,6 +202,20 @@ export function pickNextPiece(
   return getViewFromEngine(refs, 'BOT_THINKING', currentScore, currentPiecesPlaced, null);
 }
 
+/** Apply only the hold swap (no placement). Used to split hold into its own phase. */
+export function applyHoldOnly(
+  refs: EngineRefs,
+  currentScore: ViewState['scoreState'],
+  currentPiecesPlaced: number,
+): ViewState {
+  const { game } = refs;
+  if (!game) return createInitialView(refs.modeConfig ?? undefined);
+
+  game.hold();
+
+  return getViewFromEngine(refs, 'WAITING_FOR_PLAYER', currentScore, currentPiecesPlaced, null);
+}
+
 export function applyAnimationFrame(
   refs: EngineRefs,
   frame: AnimationKeyframe,

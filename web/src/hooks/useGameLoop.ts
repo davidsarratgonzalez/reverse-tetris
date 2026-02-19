@@ -23,6 +23,7 @@ import {
   startGame,
   pickPiece,
   pickNextPiece,
+  applyHoldOnly,
   applyAnimationFrame,
   applyPlacement,
   extractBoardCells,
@@ -235,6 +236,31 @@ export function useGameLoop(): GameControls {
         return;
       }
 
+      // First hold (holdPiece is empty) consumes an extra piece from the queue.
+      // Split it: apply only the hold swap, let user fill the gap, then AI re-runs.
+      // Subsequent holds just swap current↔hold without consuming from the queue.
+      if (placement.held && game.holdPiece === null) {
+        const v = viewRef.current;
+        const holdView = applyHoldOnly(engineRefs.current, v.scoreState, v.piecesPlaced);
+        holdView.activeInput = 'hold';
+        setView(holdView);
+        // Brief flash, then clear
+        timerRef.current = setTimeout(() => {
+          if (genRef.current !== gen) return;
+          setView(prev => ({ ...prev, activeInput: null }));
+        }, 300);
+        return;
+      }
+
+      // For swap holds, apply hold in the engine BEFORE animation
+      // so the UI immediately shows the correct current/hold pieces.
+      // Then strip `held` from the placement so applyPlacement won't re-hold.
+      const didHold = placement.held;
+      if (didHold) {
+        game.hold();
+        placement = { ...placement, held: false };
+      }
+
       const hasHardDrop = mc.mode === 'modern';
       const hasInitialDrop = mc.gameConfig.initialDrop ?? false;
       const keyframes = planAnimation(
@@ -253,8 +279,7 @@ export function useGameLoop(): GameControls {
         return;
       }
 
-      // Flash "hold" input on spawn frame when the bot used hold
-      if (placement.held && keyframes[0]) {
+      if (didHold && keyframes[0]) {
         keyframes[0].input = 'hold';
       }
 
