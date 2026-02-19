@@ -28,7 +28,6 @@ export function PieceSelector({ onPick, disabled, label }: PieceSelectorProps) {
             } as React.CSSProperties}
           >
             <PieceShape piece={piece} cellSize={SELECTOR_CELL_SIZE} />
-            <span className="selector-label">{PIECE_NAMES[piece]}</span>
           </button>
         ))}
       </div>

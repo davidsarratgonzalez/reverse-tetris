@@ -17,11 +17,7 @@ const ROTATION_BUTTONS: { id: BotInput; label: string; symbol: string }[] = [
   { id: 'rotateCW', label: 'CW', symbol: '\u21BB' },
 ];
 
-const HARD_DROP_BUTTON = { id: 'hardDrop' as BotInput, label: 'DROP', symbol: '\u2913' };
-
 export function InputDisplay({ activeInput, mode }: InputDisplayProps) {
-  const showHardDrop = mode === 'modern';
-
   return (
     <div className="input-display">
       <span className="nes-label">Bot input</span>
@@ -45,12 +41,10 @@ export function InputDisplay({ activeInput, mode }: InputDisplayProps) {
             <span className="input-btn-label">{btn.label}</span>
           </div>
         ))}
-        {showHardDrop && (
-          <div
-            className={`input-btn ${activeInput === HARD_DROP_BUTTON.id ? 'input-btn--active' : ''}`}
-          >
-            <span className="input-btn-symbol">{HARD_DROP_BUTTON.symbol}</span>
-            <span className="input-btn-label">{HARD_DROP_BUTTON.label}</span>
+        {mode === 'modern' && (
+          <div className={`input-btn ${activeInput === 'hold' ? 'input-btn--active' : ''}`}>
+            <span className="input-btn-symbol">{'\u21C4'}</span>
+            <span className="input-btn-label">HOLD</span>
           </div>
         )}
       </div>

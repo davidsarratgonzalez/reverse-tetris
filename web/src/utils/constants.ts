@@ -6,7 +6,7 @@ export const BUFFER_ROWS = 20;
 export const VISIBLE_BUFFER = 3;
 export const TOTAL_RENDER_HEIGHT = BOARD_HEIGHT + VISIBLE_BUFFER;
 export const CELL_SIZE = 28;
-export const PREVIEW_CELL_SIZE = 20;
+export const PREVIEW_CELL_SIZE = 24;
 export const SELECTOR_CELL_SIZE = 24;
 
 // Animation timing per move type (ms) at speed 1x

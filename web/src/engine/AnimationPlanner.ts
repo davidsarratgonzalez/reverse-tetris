@@ -4,7 +4,7 @@ import type { TryRotateFn } from '@core/rotation';
 import { tryRotate } from '@core/srs';
 import type { Board } from '@core/board';
 
-export type BotInput = 'left' | 'right' | 'down' | 'rotateCW' | 'rotateCCW' | 'hardDrop' | null;
+export type BotInput = 'left' | 'right' | 'down' | 'rotateCW' | 'rotateCCW' | 'hardDrop' | 'hold' | null;
 
 export interface AnimationKeyframe {
   type: 'spawn' | 'move' | 'rotate' | 'drop' | 'lock';

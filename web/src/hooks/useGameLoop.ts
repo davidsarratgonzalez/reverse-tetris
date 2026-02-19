@@ -252,6 +252,11 @@ export function useGameLoop(): GameControls {
         return;
       }
 
+      // Flash "hold" input on spawn frame when the bot used hold
+      if (placement.held && keyframes[0]) {
+        keyframes[0].input = 'hold';
+      }
+
       startAnimLoop(keyframes, placement, gen);
     }, 30);
 

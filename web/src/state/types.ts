@@ -22,6 +22,7 @@ export interface ViewState {
   boardHeight: number;
   // Picking phase
   picksRemaining: number;
+  pickedPieces: Piece[];
   // Current/animating piece
   activePiece: {
     piece: Piece;

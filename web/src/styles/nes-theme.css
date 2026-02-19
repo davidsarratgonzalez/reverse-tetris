@@ -21,6 +21,8 @@
 .nes-value {
   font-size: 16px;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .nes-btn {

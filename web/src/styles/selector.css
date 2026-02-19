@@ -1,4 +1,5 @@
 .piece-selector {
+  width: 280px; /* match board width (BOARD_WIDTH × CELL_SIZE) */
   text-align: center;
 }
 
@@ -13,12 +14,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 6px;
+  min-height: 64px;
   border: 2px solid transparent;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.03);
   transition: all 0.1s ease;
+  overflow: hidden;
+}
+
+.selector-btn svg {
+  max-width: 100%;
+  height: auto;
 }
 
 .selector-btn:not(:disabled):hover {

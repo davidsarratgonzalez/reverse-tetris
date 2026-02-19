@@ -42,6 +42,29 @@ export function App() {
               : '';
 
   const isModern = view.mode === 'modern';
+  const previewCount = isModern ? 5 : 1;
+
+  // During PICKING: split pickedPieces into current (first) + preview (rest), pad with nulls
+  // During gameplay: pad preview when randomizer is short (e.g. after hold)
+  let displayCurrent: import('@core/types').Piece | null;
+  let displayPreview: (import('@core/types').Piece | null)[];
+
+  if (view.phase === 'PICKING') {
+    const picked = view.pickedPieces;
+    displayCurrent = picked[0] ?? null;
+    const previewPicked = picked.slice(1);
+    displayPreview = [...previewPicked];
+    while (displayPreview.length < previewCount) {
+      displayPreview.push(null);
+    }
+  } else {
+    displayCurrent = view.currentPiece;
+    // Pad ALL missing slots with null (e.g. 2 empty after hold)
+    displayPreview = [...view.preview];
+    while (displayPreview.length < previewCount) {
+      displayPreview.push(null);
+    }
+  }
 
   return (
     <div className="game-layout">
@@ -50,12 +73,9 @@ export function App() {
         <ScorePanel scoreState={view.scoreState} piecesPlaced={view.piecesPlaced} />
         <SpeedControl speed={speed} setSpeed={setSpeed} />
         <InputDisplay activeInput={view.activeInput} mode={view.mode} />
-        {isModern && view.holdPiece != null && (
-          <PiecePreview pieces={[view.holdPiece]} label="Hold" />
-        )}
       </div>
 
-      {/* Center: board */}
+      {/* Center: board + selector */}
       <div className="center-panel">
         <div className="phase-indicator">
           <span className={`phase-text ${view.phase === 'WAITING_FOR_PLAYER' ? 'phase-text--highlight' : ''}`}>
@@ -63,22 +83,35 @@ export function App() {
           </span>
         </div>
         <Board view={view} />
-      </div>
-
-      {/* Right panel */}
-      <div className="side-panel side-panel--right">
-        {view.currentPiece != null && (
-          <PiecePreview
-            pieces={[view.currentPiece]}
-            label="Current"
-          />
-        )}
-        <PiecePreview pieces={view.preview} label="Next" />
         <PieceSelector
           onPick={onPickPiece}
           disabled={!canPick}
           label={selectorLabel}
         />
+      </div>
+
+      {/* Right panel */}
+      <div className="side-panel side-panel--right">
+        <PiecePreview
+          pieces={[displayCurrent]}
+          label="Current"
+          highlightNextPending={view.phase === 'PICKING' && displayCurrent == null}
+        />
+        <PiecePreview
+          pieces={displayPreview}
+          label="Next"
+          highlightNextPending={
+            (view.phase === 'PICKING' && displayCurrent != null) ||
+            view.phase === 'WAITING_FOR_PLAYER'
+          }
+        />
+        {isModern && (
+          <PiecePreview
+            pieces={[view.holdPiece ?? null]}
+            label="Hold"
+            placeholder="-"
+          />
+        )}
       </div>
 
       {/* Game over overlay */}

@@ -33,12 +33,37 @@ export function Board({ view }: BoardProps) {
         viewBox={`0 ${svgYStart} ${w} ${svgH}`}
         style={{ display: 'block' }}
       >
-        {/* Buffer zone background (above the playfield) */}
+        {/* Buffer zone (above the playfield) — spawn area in Modern mode */}
         {visibleBuffer > 0 && (
-          <rect
-            x={0} y={svgYStart} width={w} height={visibleBuffer}
-            fill="var(--bg-primary)"
-          />
+          <>
+            <rect
+              x={0} y={svgYStart} width={w} height={visibleBuffer}
+              fill="var(--bg-primary)"
+            />
+            {/* Contour outline matching the playfield border style */}
+            <rect
+              x={0} y={svgYStart} width={w} height={visibleBuffer}
+              fill="none"
+              stroke="var(--border-color)"
+              strokeWidth={0.12}
+              strokeDasharray="0.3 0.2"
+              opacity={0.4}
+            />
+            {/* Label */}
+            <text
+              x={w / 2}
+              y={svgYStart + visibleBuffer / 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="var(--border-color)"
+              fontSize={0.7}
+              fontFamily="'Press Start 2P', monospace"
+              letterSpacing={0.15}
+              opacity={0.35}
+            >
+              BLIND ZONE
+            </text>
+          </>
         )}
 
         {/* Playfield background */}

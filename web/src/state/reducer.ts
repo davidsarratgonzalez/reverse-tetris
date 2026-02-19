@@ -32,6 +32,7 @@ export function createInitialView(modeConfig?: ModeConfig): ViewState {
     boardWidth: BOARD_WIDTH,
     boardHeight: BOARD_HEIGHT,
     picksRemaining: 0,
+    pickedPieces: [],
     activePiece: null,
     ghostY: null,
     showGhost: modeConfig?.showGhost ?? false,
@@ -133,11 +134,13 @@ export function pickPiece(
 
   randomizer.enqueue(piece);
   const remaining = currentView.picksRemaining - 1;
+  const pickedPieces = [...currentView.pickedPieces, piece];
 
   if (remaining > 0) {
     return {
       ...currentView,
       picksRemaining: remaining,
+      pickedPieces,
     };
   }
 
@@ -186,6 +189,15 @@ export function pickNextPiece(
   currentPiecesPlaced: number,
 ): ViewState {
   refs.randomizer!.enqueue(piece);
+
+  // If the preview is still short (e.g. bot used hold, consuming 2 pieces),
+  // stay in WAITING_FOR_PLAYER so the user fills the remaining slot(s).
+  const game = refs.game!;
+  const previewCount = game.config.previewCount ?? 1;
+  if (game.getPreview().length < previewCount) {
+    return getViewFromEngine(refs, 'WAITING_FOR_PLAYER', currentScore, currentPiecesPlaced, null);
+  }
+
   return getViewFromEngine(refs, 'BOT_THINKING', currentScore, currentPiecesPlaced, null);
 }
 

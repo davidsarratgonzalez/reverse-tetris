@@ -10,12 +10,31 @@ interface PieceShapeProps {
   className?: string;
 }
 
+/** Uniform display box: 4 wide × 2 tall. All pieces are centered within. */
+const DISPLAY_W = 4;
+const DISPLAY_H = 2;
+
 export function PieceShape({ piece, cellSize, rotation = Rotation.R0, ghost, className }: PieceShapeProps) {
   const cells = PIECE_CELLS[piece]![rotation]!;
-  const bboxW = PIECE_BBOX_W[piece]!;
   const bboxH = piece === Piece.I ? 4 : 3;
-  const size = bboxW * cellSize;
-  const height = bboxH * cellSize;
+
+  // Convert cells to SVG coordinates (Y-flip: our Y+ is up, SVG Y+ is down)
+  const svgCells = cells.map(cell => ({
+    x: cell.x,
+    y: bboxH - 1 - cell.y,
+  }));
+
+  // Find actual bounding box of cells
+  const minX = Math.min(...svgCells.map(c => c.x));
+  const maxX = Math.max(...svgCells.map(c => c.x));
+  const minY = Math.min(...svgCells.map(c => c.y));
+  const maxY = Math.max(...svgCells.map(c => c.y));
+
+  // Center within uniform display box
+  const cellsW = maxX - minX + 1;
+  const cellsH = maxY - minY + 1;
+  const xShift = (DISPLAY_W - cellsW) / 2 - minX;
+  const yShift = (DISPLAY_H - cellsH) / 2 - minY;
 
   const color = PIECE_COLORS[piece];
   const light = PIECE_COLORS_LIGHT[piece];
@@ -23,20 +42,18 @@ export function PieceShape({ piece, cellSize, rotation = Rotation.R0, ghost, cla
 
   return (
     <svg
-      width={size}
-      height={height}
-      viewBox={`0 0 ${bboxW} ${bboxH}`}
+      width={DISPLAY_W * cellSize}
+      height={DISPLAY_H * cellSize}
+      viewBox={`0 0 ${DISPLAY_W} ${DISPLAY_H}`}
       className={className}
       style={{ display: 'block' }}
     >
-      {cells.map((cell, i) => {
-        // SVG Y is top-down, but our cells have Y+ = up, so flip
-        const svgY = bboxH - 1 - cell.y;
-        return (
+      <g transform={`translate(${xShift}, ${yShift})`}>
+        {svgCells.map((cell, i) => (
           <g key={i}>
             <rect
               x={cell.x}
-              y={svgY}
+              y={cell.y}
               width={1}
               height={1}
               fill={ghost ? 'transparent' : color}
@@ -47,13 +64,13 @@ export function PieceShape({ piece, cellSize, rotation = Rotation.R0, ghost, cla
             {!ghost && (
               <>
                 {/* NES-style highlight */}
-                <rect x={cell.x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
-                <rect x={cell.x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
+                <rect x={cell.x + 0.05} y={cell.y + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
+                <rect x={cell.x + 0.05} y={cell.y + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
               </>
             )}
           </g>
-        );
-      })}
+        ))}
+      </g>
     </svg>
   );
 }
