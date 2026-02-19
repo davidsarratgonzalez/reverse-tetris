@@ -21,7 +21,7 @@ export function Board({ view }: BoardProps) {
   const clearSet = clearingLines ? new Set(clearingLines) : null;
 
   return (
-    <div className="board-container" style={{ '--board-ratio': w / svgH } as React.CSSProperties}>
+    <div className={`board-container${visibleBuffer > 0 ? ' board-container--modern' : ''}`} style={{ '--board-ratio': w / svgH } as React.CSSProperties}>
       <svg
         className="board-svg"
         viewBox={`0 ${svgYStart} ${w} ${svgH}`}

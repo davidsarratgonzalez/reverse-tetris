@@ -67,7 +67,8 @@
    */
   .game-main .board-container {
     grid-area: board;
-    justify-self: end;
+    justify-self: start;
+    min-width: 0;
     min-height: 0;
     overflow: hidden;
     /* Width from stable viewport height (--app-h set once from JS on load) */
@@ -83,6 +84,10 @@
     width: 100%;
     height: auto;
     max-height: 100%;
+  }
+
+  .game-main .board-container--modern {
+    justify-self: center;
   }
 }
 

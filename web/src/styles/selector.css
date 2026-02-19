@@ -114,6 +114,7 @@
     max-width: none;
     width: 100%;
     padding: 4px;
+    margin-top: 8px; /* extra gap below the board */
   }
 
   .selector-grid {
