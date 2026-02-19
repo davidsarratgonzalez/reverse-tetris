@@ -4,9 +4,10 @@ interface GameOverOverlayProps {
   scoreState: ScoreState;
   piecesPlaced: number;
   onRestart: () => void;
+  onMenu: () => void;
 }
 
-export function GameOverOverlay({ scoreState, piecesPlaced, onRestart }: GameOverOverlayProps) {
+export function GameOverOverlay({ scoreState, piecesPlaced, onRestart, onMenu }: GameOverOverlayProps) {
   return (
     <div className="game-over-overlay">
       <div className="game-over-content nes-panel">
@@ -34,9 +35,14 @@ export function GameOverOverlay({ scoreState, piecesPlaced, onRestart }: GameOve
         ) : (
           <p className="game-over-msg">You defeated the bot quickly! Nice work!</p>
         )}
-        <button className="nes-btn nes-btn--accent" onClick={onRestart}>
-          Play Again
-        </button>
+        <div className="game-over-actions">
+          <button className="nes-btn nes-btn--accent" onClick={onRestart}>
+            Play Again
+          </button>
+          <button className="nes-btn" onClick={onMenu}>
+            Menu
+          </button>
+        </div>
       </div>
     </div>
   );

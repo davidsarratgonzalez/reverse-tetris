@@ -156,6 +156,24 @@
   margin-bottom: 8px;
 }
 
+/* Game action buttons (reset / menu) */
+.game-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.game-actions .nes-btn {
+  flex: 1;
+  font-size: 9px;
+  padding: 6px 4px;
+}
+
+.game-over-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 /* Responsive: stack vertically on narrow screens */
 @media (max-width: 768px) {
   .game-layout {

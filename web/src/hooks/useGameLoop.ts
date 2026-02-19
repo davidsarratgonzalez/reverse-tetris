@@ -34,7 +34,8 @@ export interface GameControls {
   view: ViewState;
   onStart: (mode: GameMode) => void;
   onPickPiece: (piece: Piece) => void;
-  onRestart: () => void;
+  onReset: () => void;
+  onMenu: () => void;
   speed: number;
   setSpeed: (s: number) => void;
 }
@@ -282,11 +283,19 @@ export function useGameLoop(): GameControls {
     }
   }, []);
 
-  const onRestart = useCallback(() => {
+  const onReset = useCallback(() => {
+    cancelAll();
+    const mc = engineRefs.current.modeConfig;
+    if (!mc) return;
+    engineRefs.current = createEngineRefs();
+    setView(startGame(engineRefs.current, mc));
+  }, [cancelAll]);
+
+  const onMenu = useCallback(() => {
     cancelAll();
     engineRefs.current = createEngineRefs();
     setView(createInitialView());
   }, [cancelAll]);
 
-  return { view, onStart, onPickPiece, onRestart, speed, setSpeed };
+  return { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed };
 }

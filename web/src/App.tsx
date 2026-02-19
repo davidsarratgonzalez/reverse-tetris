@@ -13,7 +13,7 @@ import './styles/selector.css';
 import './styles/input-display.css';
 
 export function App() {
-  const { view, onStart, onPickPiece, onRestart, speed, setSpeed } = useGameLoop();
+  const { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed } = useGameLoop();
 
   if (view.phase === 'START_SCREEN') {
     return <StartScreen onStart={onStart} />;
@@ -73,6 +73,10 @@ export function App() {
         <ScorePanel scoreState={view.scoreState} piecesPlaced={view.piecesPlaced} />
         <SpeedControl speed={speed} setSpeed={setSpeed} />
         <InputDisplay activeInput={view.activeInput} mode={view.mode} />
+        <div className="game-actions">
+          <button className="nes-btn" onClick={onReset}>Reset</button>
+          <button className="nes-btn" onClick={onMenu}>Menu</button>
+        </div>
       </div>
 
       {/* Center: board + selector */}
@@ -119,7 +123,8 @@ export function App() {
         <GameOverOverlay
           scoreState={view.scoreState}
           piecesPlaced={view.piecesPlaced}
-          onRestart={onRestart}
+          onRestart={onReset}
+          onMenu={onMenu}
         />
       )}
     </div>
