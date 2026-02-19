@@ -40,7 +40,7 @@ export function classicMode(): ModeConfig {
     showGhost: false,
     visibleBuffer: 0,
     aiType: 'expectimax',
-    aiConfig: { depth: 2 },
+    aiConfig: { depth: 3 },
   };
 }
 

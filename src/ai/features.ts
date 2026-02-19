@@ -40,18 +40,18 @@ export function extractFeatures(
   }
   const maxColHeight = Math.max(...colHeight);
 
-  // Feature 3: Row transitions
+  // Feature 3: Row transitions (standard BCTS — walls = FULL)
   // For each row (up to maxColHeight), count filled↔empty transitions.
-  // Walls are NOT counted as filled — this prevents artificial bias toward
-  // wall-adjacent placements in adversarial scenarios.
+  // Both left and right walls count as filled cells (standard BCTS definition).
   let rowTransitions = 0;
   for (let y = 0; y < maxColHeight; y++) {
-    let prevFilled = board.get(0, y);
-    for (let x = 1; x < w; x++) {
+    let prevFilled = true; // left wall = FULL
+    for (let x = 0; x < w; x++) {
       const filled = board.get(x, y);
       if (filled !== prevFilled) rowTransitions++;
       prevFilled = filled;
     }
+    if (!prevFilled) rowTransitions++; // right wall = FULL
   }
 
   // Feature 4: Column transitions
@@ -97,39 +97,45 @@ export function extractFeatures(
     if (rowHasHole[y]) rowsWithHoles++;
   }
 
-  // Feature 6: Cumulative wells
+  // Feature 6: Cumulative wells (standard BCTS — walls = infinitely tall)
   // A well at column x exists where both neighbors are higher than x.
-  // Wall columns (0 and w-1) only check their inner neighbor — walls are NOT
-  // treated as infinitely tall columns, preventing artificial incentive to
-  // fill wall-adjacent columns.
+  // Wall boundaries are treated as infinitely tall (height h), standard BCTS.
   // Well depth = min(leftHeight, rightHeight) - colHeight[x], clamped to >= 0.
   // Cumulative well = 1 + 2 + ... + depth = depth * (depth + 1) / 2
   let cumulativeWells = 0;
   for (let x = 0; x < w; x++) {
-    let minNeighbor: number;
-    if (x === 0) {
-      minNeighbor = colHeight[1]!;
-    } else if (x === w - 1) {
-      minNeighbor = colHeight[w - 2]!;
-    } else {
-      minNeighbor = Math.min(colHeight[x - 1]!, colHeight[x + 1]!);
-    }
+    const left = x === 0 ? h : colHeight[x - 1]!;
+    const right = x === w - 1 ? h : colHeight[x + 1]!;
+    const minNeighbor = Math.min(left, right);
     const depth = minNeighbor - colHeight[x]!;
     if (depth > 0) {
       cumulativeWells += (depth * (depth + 1)) / 2;
     }
   }
 
-  // Feature 9: Bumpiness — sum of absolute height differences between adjacent columns.
-  // Penalizes uneven surfaces, which are especially dangerous in NRS where pieces
-  // can't use wall kicks to navigate past obstacles.
-  let bumpiness = 0;
-  for (let x = 0; x < w - 1; x++) {
-    bumpiness += Math.abs(colHeight[x]! - colHeight[x + 1]!);
+  // Feature 9: Peak sum — symmetric to cumulativeWells, penalizes peaks/towers.
+  // For each column, measure how much it protrudes above its neighbors.
+  // Walls are treated as height=0 (open), opposite of wells where walls=∞.
+  // Cumulative formula matches wells: 1+2+...+peak = peak*(peak+1)/2
+  let peakSum = 0;
+  for (let x = 0; x < w; x++) {
+    const left = x === 0 ? 0 : colHeight[x - 1]!;
+    const right = x === w - 1 ? 0 : colHeight[x + 1]!;
+    const peak = colHeight[x]! - Math.max(left, right);
+    if (peak > 0) {
+      peakSum += (peak * (peak + 1)) / 2;
+    }
   }
 
-  // Feature 10: Max column height — the tallest column on the board.
-  // Tall columns partition the board in NRS and block piece movement.
+  // Feature 10: Cliffiness squared — Σ(Δh)² between adjacent columns.
+  // Penalizes large height differences quadratically (towers punished harder).
+  let cliffinessSquared = 0;
+  for (let x = 0; x < w - 1; x++) {
+    const diff = colHeight[x]! - colHeight[x + 1]!;
+    cliffinessSquared += diff * diff;
+  }
+
+  // Feature 11: Max column height — the tallest column on the board.
   const maxHeight = maxColHeight;
 
   return {
@@ -141,7 +147,8 @@ export function extractFeatures(
     cumulativeWells,
     holeDepth,
     rowsWithHoles,
-    bumpiness,
+    peakSum,
+    cliffinessSquared,
     maxHeight,
   };
 }

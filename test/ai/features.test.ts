@@ -59,15 +59,16 @@ describe('Feature extraction', () => {
     expect(features.rowsWithHoles).toBe(1); // only row 0 has holes
   });
 
-  it('should count row transitions without wall borders', () => {
+  it('should count row transitions with wall borders (standard BCTS)', () => {
     const board = new Board(10, 24);
     // Row 0: [filled, empty, empty, ..., empty]
     board.set(0, 0, true);
-    // Walls are NOT counted as filled.
-    // Transitions: cell0(filled)->cell1(empty)=1, rest are empty=0
-    // Total: 1 transition
+    // Walls ARE counted as filled (standard BCTS).
+    // Transitions: leftWall(filled)->cell0(filled)=0, cell0(filled)->cell1(empty)=1,
+    // rest are empty=0, cell9(empty)->rightWall(filled)=1
+    // Total: 2 transitions
     const features = extractFeatures(board, [0], 0, 0);
-    expect(features.rowTransitions).toBe(1);
+    expect(features.rowTransitions).toBe(2);
   });
 
   it('should count column transitions', () => {

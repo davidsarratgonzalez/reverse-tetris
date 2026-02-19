@@ -4,6 +4,9 @@ import type { Weights } from '../ai/evaluator.js';
 import { greedySelect } from '../ai/greedy.js';
 import { expectimaxSelect } from '../ai/expectimax.js';
 
+/** Number of weight dimensions (must match Weights tuple length). */
+const WEIGHT_DIM = 11;
+
 export interface CEConfig {
   populationSize: number; // N: number of candidate weight vectors per iteration
   eliteRatio: number; // rho: fraction of top candidates to keep (e.g. 0.1)
@@ -16,8 +19,10 @@ export interface CEConfig {
   randomizer: 'uniform' | 'bag7';
   previewCount: number;
   allowHold: boolean;
-  /** Planner depth during evaluation. 1 = greedy (fast), 2 = expectimax depth 2. */
+  /** Planner depth during evaluation. 1 = greedy (fast), 2+ = expectimax. */
   evalDepth?: number;
+  /** Rotation system for training. */
+  rotationSystem?: 'srs' | 'nrs';
 }
 
 export interface CEIterationResult {
@@ -66,7 +71,11 @@ function playOneGame(
         ? greedySelect(snapshot, weights)
         : expectimaxSelect(snapshot, weights, { depth: evalDepth });
     if (!placement) break;
-    game.applyPlacement(placement);
+    try {
+      game.applyPlacement(placement);
+    } catch {
+      break;
+    }
   }
   return game.linesCleared;
 }
@@ -76,7 +85,7 @@ export function trainCrossEntropy(
   initialWeights?: Weights,
   onIteration?: (result: CEIterationResult) => void,
 ): CEResult {
-  const dim = 8;
+  const dim = WEIGHT_DIM;
   const rng = createPrng(config.seed);
 
   // Initialize mean and variance
@@ -112,6 +121,10 @@ export function trainCrossEntropy(
           previewCount: config.previewCount,
           allowHold: config.allowHold,
           seed: gameSeed,
+          rotationSystem: config.rotationSystem ?? 'srs',
+          bufferRows: config.rotationSystem === 'nrs' ? 2 : 20,
+          initialDrop: config.rotationSystem !== 'nrs',
+          truncateLock: config.rotationSystem === 'nrs',
         };
         totalLines += playOneGame(w as unknown as Weights, gameConfig, config.maxPiecesPerGame, evalDepth);
       }

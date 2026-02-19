@@ -39,7 +39,8 @@ export interface FeatureVector {
   cumulativeWells: number;
   holeDepth: number;
   rowsWithHoles: number;
-  bumpiness: number;
+  peakSum: number;           // symmetric to wells — penalizes towers/peaks
+  cliffinessSquared: number; // Σ(Δh)² — quadratic height difference penalty
   maxHeight: number;
 }
 

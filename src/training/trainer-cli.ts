@@ -1,5 +1,5 @@
 import { BCTS_WEIGHTS, loadWeights, saveWeights } from '../ai/weights.js';
-import type { Weights } from '../ai/evaluator.js';
+import { NRS_WEIGHTS, type Weights } from '../ai/evaluator.js';
 import { trainCrossEntropy, type CEConfig } from './cross-entropy.js';
 
 function parseArgs(): {
@@ -17,6 +17,9 @@ function parseArgs(): {
   output: string;
   initWeightsPath?: string;
   fromBCTS: boolean;
+  fromNRS: boolean;
+  mode: 'srs' | 'nrs';
+  evalDepth: number;
 } {
   const args = process.argv.slice(2);
   const opts = {
@@ -34,6 +37,9 @@ function parseArgs(): {
     output: 'data/weights.json',
     initWeightsPath: undefined as string | undefined,
     fromBCTS: false,
+    fromNRS: false,
+    mode: 'srs' as 'srs' | 'nrs',
+    evalDepth: 1,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -94,8 +100,27 @@ function parseArgs(): {
       case '--from-bcts':
         opts.fromBCTS = true;
         break;
+      case '--from-nrs':
+        opts.fromNRS = true;
+        break;
+      case '--mode':
+        opts.mode = next as 'srs' | 'nrs';
+        i++;
+        break;
+      case '--depth':
+        opts.evalDepth = parseInt(next!, 10);
+        i++;
+        break;
     }
   }
+
+  // Apply NRS defaults if mode is nrs
+  if (opts.mode === 'nrs') {
+    if (!args.includes('--preview')) opts.previewCount = 1;
+    if (!args.includes('--no-hold') && !args.includes('--hold')) opts.allowHold = false;
+    if (!args.includes('--randomizer')) opts.randomizer = 'uniform';
+  }
+
   return opts;
 }
 
@@ -103,7 +128,10 @@ async function main(): Promise<void> {
   const opts = parseArgs();
 
   let initWeights: Weights | undefined;
-  if (opts.fromBCTS) {
+  if (opts.fromNRS) {
+    initWeights = NRS_WEIGHTS;
+    console.log('Starting from NRS weights');
+  } else if (opts.fromBCTS) {
     initWeights = BCTS_WEIGHTS;
     console.log('Starting from BCTS weights');
   } else if (opts.initWeightsPath) {
@@ -111,13 +139,13 @@ async function main(): Promise<void> {
     console.log(`Starting from weights in ${opts.initWeightsPath}`);
   }
 
-  console.log(`\nCross-Entropy Training`);
+  console.log(`\nCross-Entropy Training (${opts.mode.toUpperCase()} mode)`);
   console.log(`Population: ${opts.population} | Elite: ${(opts.eliteRatio * 100).toFixed(0)}%`);
   console.log(`Iterations: ${opts.iterations} | Games/eval: ${opts.gamesPerEval}`);
   console.log(`Max pieces/game: ${opts.maxPieces.toLocaleString()}`);
   console.log(`Noise: ${opts.noiseInit} -> ${opts.noiseFinal}`);
   console.log(`Randomizer: ${opts.randomizer} | Hold: ${opts.allowHold} | Preview: ${opts.previewCount}`);
-  console.log(`Seed: ${opts.seed}`);
+  console.log(`Eval depth: ${opts.evalDepth} | Seed: ${opts.seed}`);
   console.log('\u2500'.repeat(80));
 
   const ceConfig: CEConfig = {
@@ -132,6 +160,8 @@ async function main(): Promise<void> {
     randomizer: opts.randomizer,
     previewCount: opts.previewCount,
     allowHold: opts.allowHold,
+    evalDepth: opts.evalDepth,
+    rotationSystem: opts.mode,
   };
 
   const startTime = performance.now();

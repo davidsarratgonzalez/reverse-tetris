@@ -8,8 +8,8 @@ export { BCTS_WEIGHTS };
 export async function loadWeights(path: string): Promise<Weights> {
   const raw = await readFile(path, 'utf-8');
   const arr = JSON.parse(raw) as number[];
-  if (!Array.isArray(arr) || arr.length !== 8) {
-    throw new Error(`Invalid weights file: expected array of 8 numbers, got ${JSON.stringify(arr).slice(0, 100)}`);
+  if (!Array.isArray(arr) || arr.length !== 11) {
+    throw new Error(`Invalid weights file: expected array of 11 numbers, got ${JSON.stringify(arr).slice(0, 100)}`);
   }
   return arr as unknown as Weights;
 }
