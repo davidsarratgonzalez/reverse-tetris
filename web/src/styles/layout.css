@@ -410,7 +410,18 @@
     max-width: 200px;
   }
 
-  /* Start screen */
+  /* Start screen: height-driven background board to fill portrait screens */
+  .start-bg .board-container {
+    width: auto;
+  }
+
+  .start-bg .board-svg {
+    height: 100vh;
+    height: 100svh;
+    width: auto;
+    max-height: none;
+  }
+
   .start-screen {
     padding-top: 40px;
   }
