@@ -94,6 +94,7 @@ function getViewFromEngine(
     boardWidth: BOARD_WIDTH,
     boardHeight: BOARD_HEIGHT,
     picksRemaining: 0,
+    pickedPieces: [],
     activePiece,
     ghostY,
     showGhost,
