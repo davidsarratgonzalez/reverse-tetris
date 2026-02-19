@@ -110,12 +110,14 @@ export class Board {
   }
 
   // Place piece cells onto the board. Returns the absolute cell positions placed.
-  placePiece(piece: Piece, rotation: Rotation, px: number, py: number): Vec2[] {
+  // If truncateAbove is set, cells at y >= truncateAbove are discarded (NES behavior).
+  placePiece(piece: Piece, rotation: Rotation, px: number, py: number, truncateAbove?: number): Vec2[] {
     const cells = PIECE_CELLS[piece]![rotation]!;
     const placed: Vec2[] = [];
     for (const cell of cells) {
       const bx = px + cell.x;
       const by = py + cell.y;
+      if (truncateAbove !== undefined && by >= truncateAbove) continue;
       this.set(bx, by, true);
       placed.push({ x: bx, y: by });
     }

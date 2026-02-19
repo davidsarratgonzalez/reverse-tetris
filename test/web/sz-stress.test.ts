@@ -97,7 +97,8 @@ describe('S/Z piece stress tests', () => {
   describe('AI behavior with S/Z spam', () => {
     it('should survive 20 consecutive Z pieces', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       // Override randomizer to always give Z
@@ -129,7 +130,8 @@ describe('S/Z piece stress tests', () => {
 
     it('should survive 20 consecutive S pieces', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       game.randomizer = {
@@ -159,7 +161,8 @@ describe('S/Z piece stress tests', () => {
 
     it('should survive alternating S/Z for 30 pieces', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       let turn = 0;
@@ -191,7 +194,8 @@ describe('S/Z piece stress tests', () => {
 
     it('AI should NOT always place Z in the same column', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       game.randomizer = {
@@ -225,7 +229,8 @@ describe('S/Z piece stress tests', () => {
 
     it('AI should use both rotations of S/Z to keep surface flat', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       game.randomizer = {
@@ -297,7 +302,8 @@ describe('S/Z piece stress tests', () => {
         const options = generatePlacements(board, Piece.Z, spawn.x, spawn.y);
         if (options.length === 0) break;
         // Pick the best placement via AI
-        const snapshot = { board: board.clone(), height: H, currentPiece: Piece.Z, holdPiece: null, holdUsed: false, allowHold: false, preview: [Piece.Z], linesCleared: 0, piecesPlaced: i };
+        const snapshot = { board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: Piece.Z, holdPiece: null, holdUsed: false, allowHold: false, preview: [Piece.Z], linesCleared: 0, piecesPlaced: i };
         const best = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
         if (!best) break;
         const sim = Game.simulatePlacement(board, best.piece, best.rotation, best.x, best.y);
@@ -334,12 +340,14 @@ describe('S/Z piece stress tests', () => {
 
     it('should detect game over when spawn position is blocked', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
 
-      // Fill the board very high
-      for (let y = 0; y < H; y++) {
+      // Fill the board including buffer rows so spawn is truly blocked
+      const totalH = H + 4;
+      for (let y = 0; y < totalH; y++) {
         for (let x = 0; x < W; x++) {
           game.board.set(x, y, true);
         }
@@ -353,7 +361,8 @@ describe('S/Z piece stress tests', () => {
 
     it('should end game after Z-only spam eventually tops out', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       game.randomizer = {
@@ -392,7 +401,8 @@ describe('S/Z piece stress tests', () => {
 
     it('should end game after S-only spam eventually tops out', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
       game.randomizer = {
@@ -425,7 +435,8 @@ describe('S/Z piece stress tests', () => {
 
     it('game over should propagate through applyPlacement in reducer', () => {
       const game = new Game({
-        width: W, height: H, bufferRows: 4,
+        width: W, height: H,
+      rotationSystem: 'srs', bufferRows: 4,
         previewCount: 1, allowHold: false, seed: 42,
       });
 
@@ -479,7 +490,8 @@ describe('S/Z piece stress tests', () => {
       // inherently creates exactly 1 hole. This is geometry, not a bug.
       const board = new Board(W, TOTAL_H);
       const snapshot = {
-        board, height: H, currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
+        board, height: H,
+      rotationSystem: 'srs', currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
         allowHold: false, preview: [Piece.Z], linesCleared: 0, piecesPlaced: 0,
       };
       const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -502,7 +514,8 @@ describe('S/Z piece stress tests', () => {
     it('S placement on flat board creates at most 1 hole (geometric minimum)', () => {
       const board = new Board(W, TOTAL_H);
       const snapshot = {
-        board, height: H, currentPiece: Piece.S, holdPiece: null, holdUsed: false,
+        board, height: H,
+      rotationSystem: 'srs', currentPiece: Piece.S, holdPiece: null, holdUsed: false,
         allowHold: false, preview: [Piece.S], linesCleared: 0, piecesPlaced: 0,
       };
       const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -527,7 +540,8 @@ describe('S/Z piece stress tests', () => {
       // Place 10 Z pieces with AI decisions
       for (let i = 0; i < 10; i++) {
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [Piece.Z], linesCleared: 0, piecesPlaced: i,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -580,7 +594,8 @@ describe('S/Z piece stress tests', () => {
         const piece = randomPiece(rng);
         const next = randomPiece(rng);
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: piece, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: piece, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [next], linesCleared, piecesPlaced,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -597,7 +612,8 @@ describe('S/Z piece stress tests', () => {
       // Phase 2: spam the adversarial piece
       for (let i = 0; i < spamCount; i++) {
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: spamPiece, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: spamPiece, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [spamPiece], linesCleared, piecesPlaced,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -703,7 +719,8 @@ describe('S/Z piece stress tests', () => {
         const piece = randomPiece(rng);
         const next = randomPiece(rng);
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: piece, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: piece, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [next], linesCleared, piecesPlaced,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -720,7 +737,8 @@ describe('S/Z piece stress tests', () => {
         const piece = i % 2 === 0 ? Piece.Z : Piece.S;
         const next = i % 2 === 0 ? Piece.S : Piece.Z;
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: piece, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: piece, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [next], linesCleared, piecesPlaced,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });
@@ -762,7 +780,8 @@ describe('S/Z piece stress tests', () => {
       let over = false;
       for (let i = 0; i < 50; i++) {
         const snapshot = {
-          board: board.clone(), height: H, currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
+          board: board.clone(), height: H,
+      rotationSystem: 'srs', currentPiece: Piece.Z, holdPiece: null, holdUsed: false,
           allowHold: false, preview: [Piece.Z], linesCleared: 0, piecesPlaced: placed,
         };
         const placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 1 });

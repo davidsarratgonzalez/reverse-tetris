@@ -39,6 +39,8 @@ export interface FeatureVector {
   cumulativeWells: number;
   holeDepth: number;
   rowsWithHoles: number;
+  bumpiness: number;
+  maxHeight: number;
 }
 
 export interface GameConfig {
@@ -49,6 +51,9 @@ export interface GameConfig {
   randomizer: 'uniform' | 'bag7';
   allowHold: boolean;
   seed: number;
+  rotationSystem: 'srs' | 'nrs';
+  initialDrop: boolean;    // Guideline: drop 1 row after spawn if possible
+  truncateLock: boolean;   // NES: discard cells above visible height when locking
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -59,6 +64,9 @@ export const DEFAULT_CONFIG: GameConfig = {
   randomizer: 'bag7',
   allowHold: true,
   seed: 0,
+  rotationSystem: 'srs',
+  initialDrop: true,
+  truncateLock: false,
 };
 
 export interface LockResult {
@@ -70,6 +78,9 @@ export interface LockResult {
 export interface GameSnapshot {
   board: import('./board.js').Board;
   height: number; // visible playfield height (without buffer rows)
+  rotationSystem: 'srs' | 'nrs';
+  initialDrop: boolean;
+  truncateLock: boolean;
   currentPiece: Piece;
   holdPiece: Piece | null;
   holdUsed: boolean;

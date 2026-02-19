@@ -1,6 +1,6 @@
 import { Game } from '../core/game.js';
 import type { GameConfig, Placement } from '../core/types.js';
-import { beamSearch, type BeamSearchConfig } from '../ai/beam-search.js';
+import { beamSearchSelect, type BeamSearchConfig } from '../ai/beam.js';
 import { greedySelect } from '../ai/greedy.js';
 import type { Weights } from '../ai/evaluator.js';
 import { BCTS_WEIGHTS, loadWeights } from '../ai/weights.js';
@@ -100,7 +100,7 @@ async function main(): Promise<void> {
 
   const game = new Game(gameConfig);
   const renderer = new TerminalRenderer();
-  const beamConfig: BeamSearchConfig = { width: opts.beamWidth, depth: opts.beamDepth };
+  const beamConfig: BeamSearchConfig = { beamWidth: opts.beamWidth, depth: opts.beamDepth };
 
   const startTime = performance.now();
   let totalDecisionMs = 0;
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
 
     let placement: Placement | null;
     if (opts.planner === 'beam') {
-      placement = beamSearch(snapshot, weights, beamConfig, gameConfig);
+      placement = beamSearchSelect(snapshot, weights, beamConfig);
     } else {
       placement = greedySelect(snapshot, weights);
     }

@@ -120,6 +120,18 @@ export function extractFeatures(
     }
   }
 
+  // Feature 9: Bumpiness — sum of absolute height differences between adjacent columns.
+  // Penalizes uneven surfaces, which are especially dangerous in NRS where pieces
+  // can't use wall kicks to navigate past obstacles.
+  let bumpiness = 0;
+  for (let x = 0; x < w - 1; x++) {
+    bumpiness += Math.abs(colHeight[x]! - colHeight[x + 1]!);
+  }
+
+  // Feature 10: Max column height — the tallest column on the board.
+  // Tall columns partition the board in NRS and block piece movement.
+  const maxHeight = maxColHeight;
+
   return {
     landingHeight,
     erodedPieceCells,
@@ -129,5 +141,7 @@ export function extractFeatures(
     cumulativeWells,
     holeDepth,
     rowsWithHoles,
+    bumpiness,
+    maxHeight,
   };
 }

@@ -1,5 +1,6 @@
 import { Board } from '../core/board.js';
 import { PIECE_BBOX_W, PIECE_CELLS } from '../core/constants.js';
+import type { TryRotateFn } from '../core/rotation.js';
 import { tryRotate } from '../core/srs.js';
 import { Piece, Rotation } from '../core/types.js';
 
@@ -45,9 +46,11 @@ export function generatePlacements(
   piece: Piece,
   spawnX: number,
   spawnY: number,
+  rotateFn: TryRotateFn = tryRotate,
+  spawnRotation: Rotation = Rotation.R0,
 ): ReachablePlacement[] {
   // If spawning collides, no placements available
-  if (board.collides(piece, Rotation.R0, spawnX, spawnY)) {
+  if (board.collides(piece, spawnRotation, spawnX, spawnY)) {
     return [];
   }
 
@@ -60,7 +63,7 @@ export function generatePlacements(
   const placements: ReachablePlacement[] = [];
 
   const queue: BfsState[] = [];
-  const startState: BfsState = { x: spawnX, y: spawnY, rotation: Rotation.R0 };
+  const startState: BfsState = { x: spawnX, y: spawnY, rotation: spawnRotation };
 
   const startIdx = encodeState(startState.x, startState.y, startState.rotation, stride);
   if (startIdx >= 0 && startIdx < visitedSize) {
@@ -108,7 +111,7 @@ export function generatePlacements(
 
     // Explore rotations (CW and CCW)
     for (const dir of [1, -1] as const) {
-      const result = tryRotate(board, piece, s.rotation, dir, s.x, s.y);
+      const result = rotateFn(board, piece, s.rotation, dir, s.x, s.y);
       if (result) {
         const idx = encodeState(result.x, result.y, result.rotation, stride);
         if (idx >= 0 && idx < visitedSize && !visited[idx]) {

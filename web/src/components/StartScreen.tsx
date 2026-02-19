@@ -1,5 +1,7 @@
+import type { GameMode } from '@core/mode';
+
 interface StartScreenProps {
-  onStart: () => void;
+  onStart: (mode: GameMode) => void;
 }
 
 export function StartScreen({ onStart }: StartScreenProps) {
@@ -13,13 +15,30 @@ export function StartScreen({ onStart }: StartScreenProps) {
         <p className="start-desc">
           Can you defeat the AI by picking the worst pieces?
         </p>
-        <button className="nes-btn nes-btn--accent start-btn" onClick={onStart}>
-          Start Game
-        </button>
+        <div className="mode-select">
+          <button
+            className="nes-btn nes-btn--accent mode-btn"
+            onClick={() => onStart('classic')}
+          >
+            Classic NES
+          </button>
+          <p className="mode-desc">
+            NRS rotation (no wall kicks) &middot; 1 preview &middot; No hold
+          </p>
+          <button
+            className="nes-btn nes-btn--accent mode-btn"
+            onClick={() => onStart('modern')}
+          >
+            Modern Guideline
+          </button>
+          <p className="mode-desc">
+            SRS rotation (wall kicks) &middot; 5 preview &middot; Hold piece &middot; Ghost
+          </p>
+        </div>
         <div className="start-rules">
           <p>How to play:</p>
           <ol>
-            <li>Pick the first two pieces to begin</li>
+            <li>Select a mode and pick the starting pieces</li>
             <li>Watch the bot play each piece</li>
             <li>After each move, pick the next piece</li>
             <li>Try to make the bot top out!</li>

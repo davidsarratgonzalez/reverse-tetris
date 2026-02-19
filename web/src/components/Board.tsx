@@ -1,26 +1,26 @@
 import { Piece, Rotation } from '@core/types';
 import { PIECE_CELLS } from '@core/constants';
 import { PIECE_COLORS, PIECE_COLORS_DARK, PIECE_COLORS_LIGHT } from '@web/utils/pieceColors';
-import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT, VISIBLE_BUFFER } from '@web/utils/constants';
+import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
-
-// SVG coordinate system: y=0 is the TOP of the visible playfield,
-// y=BOARD_HEIGHT is the bottom. Buffer rows are at negative y values.
-// The viewBox includes VISIBLE_BUFFER rows above y=0.
-const SVG_H = BOARD_HEIGHT + VISIBLE_BUFFER; // total SVG height in cells
-const SVG_Y_START = -VISIBLE_BUFFER;          // top edge of viewBox
 
 interface BoardProps {
   view: ViewState;
 }
 
 export function Board({ view }: BoardProps) {
-  const { boardCells, activePiece, ghostY, clearingLines, collapseShifts } = view;
+  const { boardCells, activePiece, ghostY, showGhost, visibleBuffer, clearingLines, collapseShifts } = view;
   const w = BOARD_WIDTH;
   const h = BOARD_HEIGHT;
   const cellSize = CELL_SIZE;
+
+  // SVG coordinate system: y=0 is the TOP of the visible playfield,
+  // y=BOARD_HEIGHT is the bottom. Buffer rows are at negative y values.
+  const svgH = h + visibleBuffer;
+  const svgYStart = -visibleBuffer;
+
   const pxW = w * cellSize;
-  const pxH = SVG_H * cellSize; // includes buffer rows in pixel height
+  const pxH = svgH * cellSize;
 
   const clearSet = clearingLines ? new Set(clearingLines) : null;
 
@@ -30,14 +30,16 @@ export function Board({ view }: BoardProps) {
         className="board-svg"
         width={pxW}
         height={pxH}
-        viewBox={`0 ${SVG_Y_START} ${w} ${SVG_H}`}
+        viewBox={`0 ${svgYStart} ${w} ${svgH}`}
         style={{ display: 'block' }}
       >
         {/* Buffer zone background (above the playfield) */}
-        <rect
-          x={0} y={SVG_Y_START} width={w} height={VISIBLE_BUFFER}
-          fill="var(--bg-primary)"
-        />
+        {visibleBuffer > 0 && (
+          <rect
+            x={0} y={svgYStart} width={w} height={visibleBuffer}
+            fill="var(--bg-primary)"
+          />
+        )}
 
         {/* Playfield background */}
         <rect x={0} y={0} width={w} height={h} fill="var(--bg-board)" />
@@ -68,7 +70,7 @@ export function Board({ view }: BoardProps) {
           const svgY = h - 1 - boardY;
           const inBuffer = boardY >= h;
 
-          if (svgY < SVG_Y_START) return null;
+          if (svgY < svgYStart) return null;
 
           const isClearing = clearSet?.has(boardY);
           const color = PIECE_COLORS[piece];
@@ -134,13 +136,14 @@ export function Board({ view }: BoardProps) {
         })}
 
         {/* Ghost piece */}
-        {activePiece && ghostY != null && ghostY !== activePiece.y && (
+        {showGhost && activePiece && ghostY != null && ghostY !== activePiece.y && (
           <ActivePieceCells
             piece={activePiece.piece}
             rotation={activePiece.rotation}
             x={activePiece.x}
             y={ghostY}
             visibleHeight={h}
+            svgYStart={svgYStart}
             ghost
           />
         )}
@@ -153,6 +156,7 @@ export function Board({ view }: BoardProps) {
             x={activePiece.x}
             y={activePiece.y}
             visibleHeight={h}
+            svgYStart={svgYStart}
           />
         )}
 
@@ -174,6 +178,7 @@ function ActivePieceCells({
   x: px,
   y: py,
   visibleHeight,
+  svgYStart,
   ghost,
 }: {
   piece: Piece;
@@ -181,6 +186,7 @@ function ActivePieceCells({
   x: number;
   y: number;
   visibleHeight: number;
+  svgYStart: number;
   ghost?: boolean;
 }) {
   const cells = PIECE_CELLS[piece]![rotation]!;
@@ -195,7 +201,7 @@ function ActivePieceCells({
         const by = py + cell.y;
         if (by < 0 || bx < 0 || bx >= BOARD_WIDTH) return null;
         const svgY = visibleHeight - 1 - by;
-        if (svgY < SVG_Y_START) return null;
+        if (svgY < svgYStart) return null;
         const inBuffer = by >= visibleHeight;
 
         return (

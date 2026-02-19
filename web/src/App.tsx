@@ -3,12 +3,14 @@ import { Board } from '@web/components/Board';
 import { ScorePanel } from '@web/components/ScorePanel';
 import { PiecePreview } from '@web/components/PiecePreview';
 import { PieceSelector } from '@web/components/PieceSelector';
+import { InputDisplay } from '@web/components/InputDisplay';
 import { StartScreen } from '@web/components/StartScreen';
 import { GameOverOverlay } from '@web/components/GameOverOverlay';
 import { SpeedControl } from '@web/components/SpeedControl';
 import './styles/layout.css';
 import './styles/board.css';
 import './styles/selector.css';
+import './styles/input-display.css';
 
 export function App() {
   const { view, onStart, onPickPiece, onRestart, speed, setSpeed } = useGameLoop();
@@ -18,16 +20,13 @@ export function App() {
   }
 
   const canPick =
-    view.phase === 'PICKING_FIRST' ||
-    view.phase === 'PICKING_SECOND' ||
+    view.phase === 'PICKING' ||
     view.phase === 'WAITING_FOR_PLAYER';
 
   const selectorLabel =
-    view.phase === 'PICKING_FIRST'
-      ? 'Pick the first piece'
-      : view.phase === 'PICKING_SECOND'
-        ? 'Pick the preview piece'
-        : 'Choose next piece';
+    view.phase === 'PICKING'
+      ? `Pick piece (${view.picksRemaining} left)`
+      : 'Choose next piece';
 
   const phaseLabel =
     view.phase === 'BOT_THINKING'
@@ -36,11 +35,13 @@ export function App() {
         ? 'Bot is playing...'
         : view.phase === 'LINE_CLEARING'
           ? 'Lines cleared!'
-          : view.phase === 'PICKING_FIRST' || view.phase === 'PICKING_SECOND'
+          : view.phase === 'PICKING'
             ? 'Your turn'
             : view.phase === 'WAITING_FOR_PLAYER'
               ? 'Pick the next piece!'
               : '';
+
+  const isModern = view.mode === 'modern';
 
   return (
     <div className="game-layout">
@@ -48,6 +49,10 @@ export function App() {
       <div className="side-panel side-panel--left">
         <ScorePanel scoreState={view.scoreState} piecesPlaced={view.piecesPlaced} />
         <SpeedControl speed={speed} setSpeed={setSpeed} />
+        <InputDisplay activeInput={view.activeInput} mode={view.mode} />
+        {isModern && view.holdPiece != null && (
+          <PiecePreview pieces={[view.holdPiece]} label="Hold" />
+        )}
       </div>
 
       {/* Center: board */}

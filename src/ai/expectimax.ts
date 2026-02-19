@@ -1,7 +1,10 @@
-import { getSpawnPosition } from '../core/constants.js';
+import { getSpawnPosition, getSpawnPositionNRS } from '../core/constants.js';
 import { Game } from '../core/game.js';
 import type { Board } from '../core/board.js';
-import { Piece, type GameSnapshot, type Placement } from '../core/types.js';
+import { NRS_SPAWN_ROTATION, tryRotateNRS } from '../core/nrs.js';
+import type { TryRotateFn } from '../core/rotation.js';
+import { tryRotate } from '../core/srs.js';
+import { Piece, Rotation, type GameSnapshot, type Placement, type Vec2 } from '../core/types.js';
 import { evaluate, type Weights } from './evaluator.js';
 import { extractFeatures } from './features.js';
 import { generatePlacements } from './placement.js';
@@ -29,14 +32,38 @@ export function expectimaxSelect(
   snapshot: GameSnapshot,
   weights: Weights,
   config: ExpectimaxConfig = { depth: 2 },
+  rotateFn?: TryRotateFn,
+  spawnRotFn?: (piece: Piece) => Rotation,
+  spawnPosFn?: (piece: Piece, width: number, height: number) => Vec2,
 ): Placement | null {
   const { board, currentPiece, preview, height } = snapshot;
   const width = board.width;
   const nextPiece: Piece | null = preview[0] ?? null;
+  const doInitialDrop = snapshot.initialDrop ?? false;
+  const truncAbove = snapshot.truncateLock ? height : undefined;
+
+  // Use provided functions or resolve from snapshot
+  const rFn = rotateFn ?? (snapshot.rotationSystem === 'nrs'
+    ? tryRotateNRS : tryRotate);
+  const srFn = spawnRotFn ?? (snapshot.rotationSystem === 'nrs'
+    ? (p: Piece) => NRS_SPAWN_ROTATION[p]! : () => Rotation.R0);
+  const spFn = spawnPosFn ?? (snapshot.rotationSystem === 'nrs'
+    ? getSpawnPositionNRS : getSpawnPosition);
 
   const memo = new Map<string, number>();
-  const spawn = getSpawnPosition(currentPiece, width, height);
-  const placements = generatePlacements(board, currentPiece, spawn.x, spawn.y);
+  const spawnRot = srFn(currentPiece);
+  const rawSpawn = spFn(currentPiece, width, height);
+
+  // Block-out check at raw spawn
+  if (board.collides(currentPiece, spawnRot, rawSpawn.x, rawSpawn.y)) return null;
+
+  // Apply initial drop
+  let spawnY = rawSpawn.y;
+  if (doInitialDrop && !board.collides(currentPiece, spawnRot, rawSpawn.x, spawnY - 1)) {
+    spawnY--;
+  }
+
+  const placements = generatePlacements(board, currentPiece, rawSpawn.x, spawnY, rFn, spawnRot);
 
   if (placements.length === 0) return null;
 
@@ -44,7 +71,7 @@ export function expectimaxSelect(
   let bestPlacement: Placement | null = null;
 
   for (const p of placements) {
-    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height);
+    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height, truncAbove);
     if (!sim) continue;
 
     let value: number;
@@ -56,7 +83,7 @@ export function expectimaxSelect(
       value = evaluate(features, weights);
     } else {
       // CHANCE node: nextPiece becomes current, average over 7 random new previews
-      value = chanceNode(sim.board, nextPiece, config.depth - 1, weights, width, height, memo);
+      value = chanceNode(sim.board, nextPiece, config.depth - 1, weights, width, height, memo, rFn, srFn, spFn, doInitialDrop, truncAbove);
     }
 
     if (value > bestScore) {
@@ -80,10 +107,15 @@ function chanceNode(
   width: number,
   height: number,
   memo: Map<string, number>,
+  rotateFn: TryRotateFn,
+  spawnRotFn: (piece: Piece) => Rotation,
+  spawnPosFn: (piece: Piece, width: number, height: number) => Vec2,
+  initialDrop: boolean,
+  truncAbove: number | undefined,
 ): number {
   let expected = 0;
   for (const nextPiece of ALL_PIECES) {
-    expected += PIECE_PROB * maxNode(board, currentPiece, nextPiece, depth, weights, width, height, memo);
+    expected += PIECE_PROB * maxNode(board, currentPiece, nextPiece, depth, weights, width, height, memo, rotateFn, spawnRotFn, spawnPosFn, initialDrop, truncAbove);
   }
   return expected;
 }
@@ -100,18 +132,37 @@ function maxNode(
   width: number,
   height: number,
   memo: Map<string, number>,
+  rotateFn: TryRotateFn,
+  spawnRotFn: (piece: Piece) => Rotation,
+  spawnPosFn: (piece: Piece, width: number, height: number) => Vec2,
+  initialDrop: boolean,
+  truncAbove: number | undefined,
 ): number {
   const key = `${board.hash()}_${currentPiece}_${nextPiece}_${depth}`;
   const cached = memo.get(key);
   if (cached !== undefined) return cached;
 
-  const spawn = getSpawnPosition(currentPiece, width, height);
-  const placements = generatePlacements(board, currentPiece, spawn.x, spawn.y);
+  const spawnRot = spawnRotFn(currentPiece);
+  const rawSpawn = spawnPosFn(currentPiece, width, height);
+
+  // Block-out check
+  if (board.collides(currentPiece, spawnRot, rawSpawn.x, rawSpawn.y)) {
+    memo.set(key, -1e9);
+    return -1e9;
+  }
+
+  // Apply initial drop
+  let spawnY = rawSpawn.y;
+  if (initialDrop && !board.collides(currentPiece, spawnRot, rawSpawn.x, spawnY - 1)) {
+    spawnY--;
+  }
+
+  const placements = generatePlacements(board, currentPiece, rawSpawn.x, spawnY, rotateFn, spawnRot);
 
   let best = -Infinity;
 
   for (const p of placements) {
-    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height);
+    const sim = Game.simulatePlacement(board, p.piece, p.rotation, p.x, p.y, height, truncAbove);
     if (!sim) continue;
 
     let value: number;
@@ -123,7 +174,7 @@ function maxNode(
       value = evaluate(features, weights);
     } else {
       // Recurse: CHANCE → MAX → ...
-      value = chanceNode(sim.board, nextPiece, depth - 1, weights, width, height, memo);
+      value = chanceNode(sim.board, nextPiece, depth - 1, weights, width, height, memo, rotateFn, spawnRotFn, spawnPosFn, initialDrop, truncAbove);
     }
 
     if (value > best) best = value;

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Piece, type Placement } from '@core/types';
-import { BCTS_WEIGHTS } from '@ai/evaluator';
+import type { GameMode, ModeConfig } from '@core/mode';
+import { classicMode, modernMode } from '@core/mode';
 import { expectimaxSelect } from '@ai/expectimax';
+import { beamSearchSelect } from '@ai/beam';
 import { planAnimation, type AnimationKeyframe } from '@web/engine/AnimationPlanner';
 import {
   SPAWN_DELAY,
@@ -13,15 +15,13 @@ import {
   LINE_COLLAPSE_DELAY,
   BOARD_WIDTH,
   BOARD_HEIGHT,
-  VISIBLE_BUFFER,
 } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
 import {
   createEngineRefs,
   createInitialView,
   startGame,
-  pickFirstPiece,
-  pickSecondPiece,
+  pickPiece,
   pickNextPiece,
   applyAnimationFrame,
   applyPlacement,
@@ -30,11 +30,9 @@ import {
   type EngineRefs,
 } from '@web/state/reducer';
 
-const TOTAL_H = BOARD_HEIGHT + VISIBLE_BUFFER;
-
 export interface GameControls {
   view: ViewState;
-  onStart: () => void;
+  onStart: (mode: GameMode) => void;
   onPickPiece: (piece: Piece) => void;
   onRestart: () => void;
   speed: number;
@@ -122,6 +120,9 @@ export function useGameLoop(): GameControls {
       // All keyframes shown — commit placement to engine
       if (!currentFrame) {
         const v = viewRef.current;
+        const mc = engineRefs.current.modeConfig;
+        const visibleBuffer = mc?.visibleBuffer ?? 0;
+        const totalH = BOARD_HEIGHT + visibleBuffer;
         let finalView: ViewState;
         try {
           finalView = applyPlacement(engineRefs.current, placement, v.scoreState, v.piecesPlaced);
@@ -145,8 +146,8 @@ export function useGameLoop(): GameControls {
 
             // Switch to post-clear board + collapse animation
             const cb = engineRefs.current.colorBoard;
-            const postClearCells = cb ? extractBoardCells(cb) : finalView.boardCells;
-            const shifts = computeCollapseShifts(clearedRows, TOTAL_H);
+            const postClearCells = cb ? extractBoardCells(cb, visibleBuffer) : finalView.boardCells;
+            const shifts = computeCollapseShifts(clearedRows, totalH);
 
             setView(prev => ({
               ...prev,
@@ -192,7 +193,8 @@ export function useGameLoop(): GameControls {
     if (view.phase !== 'BOT_THINKING') return;
 
     const game = engineRefs.current.game;
-    if (!game) return;
+    const mc = engineRefs.current.modeConfig;
+    if (!game || !mc) return;
 
     // Check if game is already over (safety check)
     if (game.gameOver) {
@@ -208,7 +210,19 @@ export function useGameLoop(): GameControls {
       let placement: Placement | null;
       try {
         const snapshot = game.snapshot();
-        placement = expectimaxSelect(snapshot, BCTS_WEIGHTS, { depth: 2 });
+        if (mc.aiType === 'beam') {
+          placement = beamSearchSelect(
+            snapshot, mc.weights,
+            { depth: mc.aiConfig.depth, beamWidth: mc.aiConfig.beamWidth ?? 100 },
+            mc.tryRotate, mc.getSpawnRotation, mc.getSpawnPosition,
+          );
+        } else {
+          placement = expectimaxSelect(
+            snapshot, mc.weights,
+            { depth: mc.aiConfig.depth },
+            mc.tryRotate, mc.getSpawnRotation, mc.getSpawnPosition,
+          );
+        }
       } catch {
         // AI error — transition to game over
         setView(prev => ({ ...prev, phase: 'GAME_OVER', gameOver: true }));
@@ -220,7 +234,13 @@ export function useGameLoop(): GameControls {
         return;
       }
 
-      const keyframes = planAnimation(game.board, placement, BOARD_WIDTH, BOARD_HEIGHT);
+      const hasHardDrop = mc.mode === 'modern';
+      const hasInitialDrop = mc.gameConfig.initialDrop ?? false;
+      const keyframes = planAnimation(
+        game.board, placement, BOARD_WIDTH, BOARD_HEIGHT,
+        mc.tryRotate, mc.getSpawnRotation(placement.piece), mc.getSpawnPosition,
+        hasHardDrop, hasInitialDrop,
+      );
 
       if (keyframes.length === 0) {
         const v = viewRef.current;
@@ -242,17 +262,16 @@ export function useGameLoop(): GameControls {
   // Cleanup on unmount
   useEffect(() => cancelAll, [cancelAll]);
 
-  const onStart = useCallback(() => {
+  const onStart = useCallback((mode: GameMode) => {
     cancelAll();
-    setView(startGame(engineRefs.current));
+    const mc = mode === 'classic' ? classicMode() : modernMode();
+    setView(startGame(engineRefs.current, mc));
   }, [cancelAll]);
 
   const onPickPiece = useCallback((piece: Piece) => {
     const v = viewRef.current;
-    if (v.phase === 'PICKING_FIRST') {
-      setView(pickFirstPiece(engineRefs.current, piece));
-    } else if (v.phase === 'PICKING_SECOND') {
-      setView(pickSecondPiece(engineRefs.current, piece));
+    if (v.phase === 'PICKING') {
+      setView(pickPiece(engineRefs.current, piece, v));
     } else if (v.phase === 'WAITING_FOR_PLAYER') {
       setView(pickNextPiece(engineRefs.current, piece, v.scoreState, v.piecesPlaced));
     }

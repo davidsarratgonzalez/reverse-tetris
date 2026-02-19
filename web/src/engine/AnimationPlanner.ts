@@ -1,7 +1,10 @@
-import { Piece, Rotation, type Placement } from '@core/types';
+import { Piece, Rotation, type Placement, type Vec2 } from '@core/types';
 import { getSpawnPosition } from '@core/constants';
+import type { TryRotateFn } from '@core/rotation';
 import { tryRotate } from '@core/srs';
 import type { Board } from '@core/board';
+
+export type BotInput = 'left' | 'right' | 'down' | 'rotateCW' | 'rotateCCW' | 'hardDrop' | null;
 
 export interface AnimationKeyframe {
   type: 'spawn' | 'move' | 'rotate' | 'drop' | 'lock';
@@ -9,6 +12,7 @@ export interface AnimationKeyframe {
   rotation: Rotation;
   x: number;
   y: number;
+  input: BotInput;
 }
 
 /**
@@ -24,20 +28,37 @@ export function planAnimation(
   placement: Placement,
   boardWidth: number,
   boardHeight: number,
+  rotateFn: TryRotateFn = tryRotate,
+  spawnRotation: Rotation = Rotation.R0,
+  spawnPosFn: (piece: Piece, width: number, height: number) => Vec2 = getSpawnPosition,
+  hasHardDrop: boolean = true,
+  initialDrop: boolean = false,
 ): AnimationKeyframe[] {
   const piece = placement.piece;
-  const spawn = getSpawnPosition(piece, boardWidth, boardHeight);
+  const rawSpawn = spawnPosFn(piece, boardWidth, boardHeight);
 
-  const path = bfsPath(board, piece, spawn.x, spawn.y, placement.x, placement.y, placement.rotation);
+  // Block-out check at raw spawn
+  if (board.collides(piece, spawnRotation, rawSpawn.x, rawSpawn.y)) return [];
+
+  // Apply initial drop (Guideline: piece drops 1 row before player control)
+  let spawnX = rawSpawn.x;
+  let spawnY = rawSpawn.y;
+  if (initialDrop && !board.collides(piece, spawnRotation, spawnX, spawnY - 1)) {
+    spawnY--;
+  }
+
+  const path = bfsPath(board, piece, spawnX, spawnY, placement.x, placement.y, placement.rotation, rotateFn, spawnRotation);
 
   const frames: AnimationKeyframe[] = [];
 
-  // Spawn frame
-  frames.push({ type: 'spawn', piece, rotation: Rotation.R0, x: spawn.x, y: spawn.y });
+  // Spawn frame at effective (post-drop) position
+  frames.push({ type: 'spawn', piece, rotation: spawnRotation, x: spawnX, y: spawnY, input: null });
 
   if (path.length === 0) {
-    frames.push({ type: 'drop', piece, rotation: placement.rotation, x: placement.x, y: placement.y });
-    frames.push({ type: 'lock', piece, rotation: placement.rotation, x: placement.x, y: placement.y });
+    if (hasHardDrop) {
+      frames.push({ type: 'drop', piece, rotation: placement.rotation, x: placement.x, y: placement.y, input: 'hardDrop' });
+    }
+    frames.push({ type: 'lock', piece, rotation: placement.rotation, x: placement.x, y: placement.y, input: null });
     return frames;
   }
 
@@ -48,7 +69,12 @@ export function planAnimation(
       : step.move === 'left' || step.move === 'right'
         ? 'move'
         : 'rotate';
-    frames.push({ type, piece, rotation: step.rot, x: step.x, y: step.y });
+    const input: BotInput = step.move === 'left' ? 'left'
+      : step.move === 'right' ? 'right'
+      : step.move === 'drop' ? 'down'
+      : step.move === 'rotateCW' ? 'rotateCW'
+      : 'rotateCCW';
+    frames.push({ type, piece, rotation: step.rot, x: step.x, y: step.y, input });
   }
 
   // Lock at final position
@@ -58,6 +84,7 @@ export function planAnimation(
     rotation: placement.rotation,
     x: placement.x,
     y: placement.y,
+    input: hasHardDrop ? 'hardDrop' : null,
   });
 
   return frames;
@@ -91,8 +118,10 @@ function bfsPath(
   targetX: number,
   targetY: number,
   targetRot: Rotation,
+  rotateFn: TryRotateFn = tryRotate,
+  spawnRotation: Rotation = Rotation.R0,
 ): BfsStep[] {
-  if (board.collides(piece, Rotation.R0, startX, startY)) {
+  if (board.collides(piece, spawnRotation, startX, startY)) {
     return [];
   }
 
@@ -102,13 +131,13 @@ function bfsPath(
   const parent = new Map<number, { parentKey: number; step: BfsStep }>();
   const visited = new Set<number>();
 
-  const startKey = encodeKey(startX, startY, Rotation.R0);
+  const startKey = encodeKey(startX, startY, spawnRotation);
   visited.add(startKey);
 
   // Check if start IS the target
   if (startKey === targetKey) return [];
 
-  const queue: BfsNode[] = [{ x: startX, y: startY, rot: Rotation.R0 }];
+  const queue: BfsNode[] = [{ x: startX, y: startY, rot: spawnRotation }];
   let head = 0;
 
   while (head < queue.length) {
@@ -146,7 +175,7 @@ function bfsPath(
     }
 
     // Rotate CW
-    const cwResult = tryRotate(board, piece, node.rot, 1, node.x, node.y);
+    const cwResult = rotateFn(board, piece, node.rot, 1, node.x, node.y);
     if (cwResult) {
       neighbors.push({
         n: { x: cwResult.x, y: cwResult.y, rot: cwResult.rotation },
@@ -155,7 +184,7 @@ function bfsPath(
     }
 
     // Rotate CCW
-    const ccwResult = tryRotate(board, piece, node.rot, -1, node.x, node.y);
+    const ccwResult = rotateFn(board, piece, node.rot, -1, node.x, node.y);
     if (ccwResult) {
       neighbors.push({
         n: { x: ccwResult.x, y: ccwResult.y, rot: ccwResult.rotation },
