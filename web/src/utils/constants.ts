@@ -5,10 +5,6 @@ export const BUFFER_ROWS = 20;
 /** How many buffer rows to render above the playfield border (spawn area) */
 export const VISIBLE_BUFFER = 3;
 export const TOTAL_RENDER_HEIGHT = BOARD_HEIGHT + VISIBLE_BUFFER;
-export const CELL_SIZE = 28;
-export const PREVIEW_CELL_SIZE = 24;
-export const SELECTOR_CELL_SIZE = 24;
-
 // Animation timing per move type (ms) at speed 1x
 export const SPAWN_DELAY = 150;  // pause at spawn position (visible in buffer)
 export const MOVE_DELAY = 60;    // horizontal move

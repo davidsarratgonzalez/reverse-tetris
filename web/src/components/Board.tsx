@@ -1,7 +1,7 @@
 import { Piece, Rotation } from '@core/types';
 import { PIECE_CELLS } from '@core/constants';
 import { PIECE_COLORS, PIECE_COLORS_DARK, PIECE_COLORS_LIGHT } from '@web/utils/pieceColors';
-import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT } from '@web/utils/constants';
+import { BOARD_WIDTH, BOARD_HEIGHT } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
 
 interface BoardProps {
@@ -12,15 +12,11 @@ export function Board({ view }: BoardProps) {
   const { boardCells, activePiece, ghostY, showGhost, visibleBuffer, clearingLines, collapseShifts } = view;
   const w = BOARD_WIDTH;
   const h = BOARD_HEIGHT;
-  const cellSize = CELL_SIZE;
 
   // SVG coordinate system: y=0 is the TOP of the visible playfield,
   // y=BOARD_HEIGHT is the bottom. Buffer rows are at negative y values.
   const svgH = h + visibleBuffer;
   const svgYStart = -visibleBuffer;
-
-  const pxW = w * cellSize;
-  const pxH = svgH * cellSize;
 
   const clearSet = clearingLines ? new Set(clearingLines) : null;
 
@@ -28,10 +24,7 @@ export function Board({ view }: BoardProps) {
     <div className="board-container">
       <svg
         className="board-svg"
-        width={pxW}
-        height={pxH}
         viewBox={`0 ${svgYStart} ${w} ${svgH}`}
-        style={{ display: 'block' }}
       >
         {/* Buffer zone (above the playfield) — spawn area in Modern mode */}
         {visibleBuffer > 0 && (

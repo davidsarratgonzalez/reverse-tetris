@@ -1,6 +1,5 @@
 import { Piece, Rotation } from '@core/types';
 import { PieceShape } from './PieceShape';
-import { PREVIEW_CELL_SIZE } from '@web/utils/constants';
 
 interface PiecePreviewProps {
   pieces: (Piece | null)[];
@@ -24,7 +23,7 @@ export function PiecePreview({ pieces, label = 'Next', placeholder = '?', highli
           return (
             <div key={i} className="preview-piece">
               {piece != null ? (
-                <PieceShape piece={piece} cellSize={PREVIEW_CELL_SIZE} />
+                <PieceShape piece={piece} />
               ) : (
                 <span className={`preview-pending ${isActive ? 'preview-pending--active' : ''}`}>
                   {placeholder}

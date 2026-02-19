@@ -10,11 +10,6 @@
   --text-accent: #f0d060;
   --text-dim: #606080;
 
-  --cell-size: 28px;
-  --cell-gap: 1px;
-  --preview-cell-size: 20px;
-  --selector-cell-size: 28px;
-
   --piece-i: #00f0f0;
   --piece-o: #f0f000;
   --piece-t: #a000f0;
@@ -33,9 +28,6 @@
 
 @media (max-width: 768px) {
   :root {
-    --cell-size: 22px;
-    --preview-cell-size: 16px;
-    --selector-cell-size: 22px;
     --panel-padding: 10px;
     --panel-gap: 8px;
   }
@@ -43,9 +35,6 @@
 
 @media (max-width: 480px) {
   :root {
-    --cell-size: 18px;
-    --preview-cell-size: 14px;
-    --selector-cell-size: 18px;
     --panel-padding: 8px;
     --panel-gap: 6px;
   }

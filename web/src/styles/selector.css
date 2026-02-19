@@ -1,5 +1,6 @@
 .piece-selector {
-  width: 280px; /* match board width (BOARD_WIDTH × CELL_SIZE) */
+  width: 100%;
+  max-width: 280px;
   text-align: center;
 }
 
@@ -107,4 +108,15 @@
   color: var(--text-accent);
   border-color: var(--text-accent);
   background: rgba(240, 208, 96, 0.1);
+}
+
+@media (max-width: 480px) {
+  .selector-btn {
+    min-height: 48px;
+    padding: 4px;
+  }
+
+  .selector-grid {
+    gap: 4px;
+  }
 }

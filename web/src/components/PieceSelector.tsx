@@ -1,7 +1,6 @@
 import { Piece } from '@core/types';
 import { PieceShape } from './PieceShape';
 import { PIECE_NAMES, PIECE_COLORS } from '@web/utils/pieceColors';
-import { SELECTOR_CELL_SIZE } from '@web/utils/constants';
 
 const ALL_PIECES: Piece[] = [Piece.I, Piece.O, Piece.T, Piece.S, Piece.Z, Piece.J, Piece.L];
 
@@ -33,7 +32,7 @@ export function PieceSelector({ onPick, disabled, label, preselected }: PieceSel
               '--piece-color': PIECE_COLORS[piece],
             } as React.CSSProperties}
           >
-            <PieceShape piece={piece} cellSize={SELECTOR_CELL_SIZE} />
+            <PieceShape piece={piece} />
           </button>
         ))}
         <button

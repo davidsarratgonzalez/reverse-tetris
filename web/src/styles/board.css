@@ -1,12 +1,16 @@
 .board-container {
   position: relative;
   line-height: 0;
+  width: min(280px, 100%);
 }
 
 .board-svg {
+  display: block;
   border-radius: 2px;
+  width: 100%;
+  height: auto;
   max-height: calc(100vh - 260px);
-  width: auto;
+  max-height: calc(100dvh - 260px);
 }
 
 /* Preview */
@@ -26,7 +30,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 0 0 54px; /* same rigid slot as .preview-piece */
+  flex: 0 0 54px;
   font-size: 24px;
   color: var(--text-dim);
 }
@@ -36,7 +40,7 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  flex: 0 0 54px; /* rigid fixed slot — fits 4×2 at 24px cell = 48px + padding */
+  flex: 0 0 54px;
   overflow: hidden;
 }
 
@@ -53,4 +57,31 @@
 
 .preview-pending--active {
   color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 768px) {
+  .board-svg {
+    max-height: calc(100vh - 200px);
+    max-height: calc(100dvh - 200px);
+  }
+}
+
+@media (max-width: 480px) {
+  .board-svg {
+    max-height: calc(100vh - 160px);
+    max-height: calc(100dvh - 160px);
+  }
+
+  .preview-piece {
+    flex: 0 0 40px;
+  }
+
+  .preview-empty {
+    flex: 0 0 40px;
+    font-size: 18px;
+  }
+
+  .preview-pending {
+    font-size: 16px;
+  }
 }

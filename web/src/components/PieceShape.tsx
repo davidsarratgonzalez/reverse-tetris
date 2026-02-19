@@ -4,7 +4,6 @@ import { PIECE_COLORS, PIECE_COLORS_DARK, PIECE_COLORS_LIGHT } from '@web/utils/
 
 interface PieceShapeProps {
   piece: Piece;
-  cellSize: number;
   rotation?: Rotation;
   ghost?: boolean;
   className?: string;
@@ -14,7 +13,7 @@ interface PieceShapeProps {
 const DISPLAY_W = 4;
 const DISPLAY_H = 2;
 
-export function PieceShape({ piece, cellSize, rotation = Rotation.R0, ghost, className }: PieceShapeProps) {
+export function PieceShape({ piece, rotation = Rotation.R0, ghost, className }: PieceShapeProps) {
   const cells = PIECE_CELLS[piece]![rotation]!;
   const bboxH = piece === Piece.I ? 4 : 3;
 
@@ -42,11 +41,9 @@ export function PieceShape({ piece, cellSize, rotation = Rotation.R0, ghost, cla
 
   return (
     <svg
-      width={DISPLAY_W * cellSize}
-      height={DISPLAY_H * cellSize}
       viewBox={`0 0 ${DISPLAY_W} ${DISPLAY_H}`}
       className={className}
-      style={{ display: 'block' }}
+      style={{ display: 'block', width: '100%', height: 'auto' }}
     >
       <g transform={`translate(${xShift}, ${yShift})`}>
         {svgCells.map((cell, i) => (
