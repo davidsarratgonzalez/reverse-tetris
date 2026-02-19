@@ -119,12 +119,12 @@ export const I_KICKS: Readonly<Record<string, ReadonlyArray<Vec2>>> = {
 export const PIECE_BBOX_W: ReadonlyArray<number> = [4, 3, 3, 3, 3, 3, 3];
 
 // Spawn position: bounding box origin (bottom-left corner) on the board.
-// Pieces spawn centered horizontally, with top cells at row `height` (first buffer row).
+// Guideline: pieces spawn ABOVE the visible playfield. Top cells at row height
+// (first buffer row). For 3×3 pieces, cells span rows height-1 and height.
+// For I (4×4), all cells at row height. Matches Tetris Effect spawn style.
 export function getSpawnPosition(piece: Piece, width: number, height: number): Vec2 {
   const bboxW = PIECE_BBOX_W[piece]!;
   const x = Math.floor((width - bboxW) / 2);
-  // Top occupied cells are at y=2 (for 3×3) or y=2 (for I 4×4) in the bounding box.
-  // Place them at the row just above the visible area (row = height).
   const y = height - 2;
   return { x, y };
 }

@@ -1,15 +1,10 @@
 .board-container {
   position: relative;
   line-height: 0;
-  /* Allow buffer-zone cells to overflow above the board */
-  overflow: visible;
-  margin-top: 40px;
 }
 
 .board-svg {
-  overflow: visible;
   border-radius: 2px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Preview */

@@ -22,10 +22,10 @@ export function createEngineRefs(): EngineRefs {
 }
 
 export function createInitialView(): ViewState {
-  const totalH = BOARD_HEIGHT + VISIBLE_BUFFER;
+  const totalRender = BOARD_HEIGHT + VISIBLE_BUFFER;
   return {
     phase: 'START_SCREEN',
-    boardCells: new Array(BOARD_WIDTH * totalH).fill(null),
+    boardCells: new Array(BOARD_WIDTH * totalRender).fill(null),
     boardWidth: BOARD_WIDTH,
     boardHeight: BOARD_HEIGHT,
     activePiece: null,
@@ -42,9 +42,8 @@ export function createInitialView(): ViewState {
 
 export function extractBoardCells(colorBoard: ColorBoard): (Piece | null)[] {
   const cells: (Piece | null)[] = [];
-  const totalH = BOARD_HEIGHT + VISIBLE_BUFFER;
-  // All rendered rows (0 to totalH-1), including buffer above playfield
-  for (let y = 0; y < totalH; y++) {
+  const totalRender = BOARD_HEIGHT + VISIBLE_BUFFER;
+  for (let y = 0; y < totalRender; y++) {
     for (let x = 0; x < BOARD_WIDTH; x++) {
       cells.push(colorBoard.get(x, y));
     }

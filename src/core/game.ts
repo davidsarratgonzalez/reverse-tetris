@@ -132,15 +132,14 @@ export class Game {
       this.currentY,
     );
 
-    // Lock-out: if any cell locks above the visible playfield, game over immediately.
-    // Matches NES Tetris behavior — no cells may exist above the visible area.
+    // Lock-out (Guideline): game over if the ENTIRE piece locks above the
+    // visible playfield. Partial lock-out (some cells above) is allowed.
     const visibleH = this.config.height;
-    for (const cell of placedCells) {
-      if (cell.y >= visibleH) {
-        this.gameOver = true;
-        this.piecesPlaced++;
-        return { linesCleared: 0, pieceCellsInCleared: 0, gameOver: true };
-      }
+    const allAbove = placedCells.every(cell => cell.y >= visibleH);
+    if (allAbove) {
+      this.gameOver = true;
+      this.piecesPlaced++;
+      return { linesCleared: 0, pieceCellsInCleared: 0, gameOver: true };
     }
 
     const { count, rows } = this.board.clearLines();
@@ -171,6 +170,7 @@ export class Game {
   snapshot(): GameSnapshot {
     return {
       board: this.board.clone(),
+      height: this.config.height,
       currentPiece: this.currentPiece,
       holdPiece: this.holdPiece,
       holdUsed: this.holdUsed,
@@ -230,11 +230,10 @@ export class Game {
       landingCells.push({ x: bx, y: by });
     }
 
-    // Lock-out: reject placements with any cell above the visible playfield
+    // Lock-out (Guideline): reject only if ENTIRE piece above visible area
     if (visibleHeight !== undefined) {
-      for (const cell of landingCells) {
-        if (cell.y >= visibleHeight) return null;
-      }
+      const allAbove = landingCells.every(cell => cell.y >= visibleHeight);
+      if (allAbove) return null;
     }
 
     const { count, rows } = b.clearLines();

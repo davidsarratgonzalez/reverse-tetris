@@ -4,6 +4,7 @@ import { BCTS_WEIGHTS } from '@ai/evaluator';
 import { expectimaxSelect } from '@ai/expectimax';
 import { planAnimation, type AnimationKeyframe } from '@web/engine/AnimationPlanner';
 import {
+  SPAWN_DELAY,
   MOVE_DELAY,
   ROTATE_DELAY,
   DROP_DELAY,
@@ -42,6 +43,7 @@ export interface GameControls {
 
 function frameDelay(type: AnimationKeyframe['type']): number {
   switch (type) {
+    case 'spawn': return SPAWN_DELAY;
     case 'move': return MOVE_DELAY;
     case 'rotate': return ROTATE_DELAY;
     case 'drop': return DROP_DELAY;
@@ -167,8 +169,9 @@ export function useGameLoop(): GameControls {
         return;
       }
 
-      // Check if enough time has elapsed to advance one frame
-      const targetDelay = frameDelay(currentFrame.type) / speedRef.current;
+      // Wait for the PREVIOUS (currently displayed) frame's delay before advancing
+      const prevFrame = anim.keyframes[anim.frameIndex - 1] ?? anim.keyframes[0]!;
+      const targetDelay = frameDelay(prevFrame.type) / speedRef.current;
       const elapsed = timestamp - anim.lastAdvance;
 
       if (elapsed >= targetDelay) {

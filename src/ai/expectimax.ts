@@ -30,9 +30,8 @@ export function expectimaxSelect(
   weights: Weights,
   config: ExpectimaxConfig = { depth: 2 },
 ): Placement | null {
-  const { board, currentPiece, preview } = snapshot;
+  const { board, currentPiece, preview, height } = snapshot;
   const width = board.width;
-  const height = board.totalHeight - 4; // visible height
   const nextPiece: Piece | null = preview[0] ?? null;
 
   const memo = new Map<string, number>();

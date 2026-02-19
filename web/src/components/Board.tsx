@@ -4,7 +4,11 @@ import { PIECE_COLORS, PIECE_COLORS_DARK, PIECE_COLORS_LIGHT } from '@web/utils/
 import { CELL_SIZE, BOARD_WIDTH, BOARD_HEIGHT, VISIBLE_BUFFER } from '@web/utils/constants';
 import type { ViewState } from '@web/state/types';
 
-const TOTAL_H = BOARD_HEIGHT + VISIBLE_BUFFER;
+// SVG coordinate system: y=0 is the TOP of the visible playfield,
+// y=BOARD_HEIGHT is the bottom. Buffer rows are at negative y values.
+// The viewBox includes VISIBLE_BUFFER rows above y=0.
+const SVG_H = BOARD_HEIGHT + VISIBLE_BUFFER; // total SVG height in cells
+const SVG_Y_START = -VISIBLE_BUFFER;          // top edge of viewBox
 
 interface BoardProps {
   view: ViewState;
@@ -13,10 +17,10 @@ interface BoardProps {
 export function Board({ view }: BoardProps) {
   const { boardCells, activePiece, ghostY, clearingLines, collapseShifts } = view;
   const w = BOARD_WIDTH;
-  const h = BOARD_HEIGHT; // 20 — standard Tetris playfield
+  const h = BOARD_HEIGHT;
   const cellSize = CELL_SIZE;
   const pxW = w * cellSize;
-  const pxH = h * cellSize;
+  const pxH = SVG_H * cellSize; // includes buffer rows in pixel height
 
   const clearSet = clearingLines ? new Set(clearingLines) : null;
 
@@ -26,13 +30,19 @@ export function Board({ view }: BoardProps) {
         className="board-svg"
         width={pxW}
         height={pxH}
-        viewBox={`0 0 ${w} ${h}`}
+        viewBox={`0 ${SVG_Y_START} ${w} ${SVG_H}`}
         style={{ display: 'block' }}
       >
+        {/* Buffer zone background (above the playfield) */}
+        <rect
+          x={0} y={SVG_Y_START} width={w} height={VISIBLE_BUFFER}
+          fill="var(--bg-primary)"
+        />
+
         {/* Playfield background */}
         <rect x={0} y={0} width={w} height={h} fill="var(--bg-board)" />
 
-        {/* Grid lines */}
+        {/* Grid lines (visible area only) */}
         {Array.from({ length: w + 1 }, (_, x) => (
           <line
             key={`v${x}`}
@@ -50,20 +60,21 @@ export function Board({ view }: BoardProps) {
           />
         ))}
 
-        {/* Locked cells (including buffer rows above playfield) */}
+        {/* Locked cells */}
         {boardCells.map((piece, idx) => {
           if (piece === null) return null;
           const x = idx % w;
           const boardY = Math.floor(idx / w); // row 0 = bottom
-          const svgY = h - 1 - boardY; // negative for buffer rows → overflows above
+          const svgY = h - 1 - boardY;
           const inBuffer = boardY >= h;
+
+          if (svgY < SVG_Y_START) return null;
 
           const isClearing = clearSet?.has(boardY);
           const color = PIECE_COLORS[piece];
           const light = PIECE_COLORS_LIGHT[piece];
           const dark = PIECE_COLORS_DARK[piece];
 
-          // Flash phase: clearing rows blink white
           if (isClearing) {
             return (
               <g key={idx}>
@@ -84,7 +95,6 @@ export function Board({ view }: BoardProps) {
             );
           }
 
-          // Collapse phase: rows above cleared lines drop down
           const shift = collapseShifts?.[boardY] ?? 0;
           if (shift > 0) {
             return (
@@ -99,9 +109,7 @@ export function Board({ view }: BoardProps) {
                 />
                 <rect
                   x={x} y={svgY} width={1} height={1}
-                  fill={color}
-                  stroke={dark}
-                  strokeWidth={0.06}
+                  fill={color} stroke={dark} strokeWidth={0.06}
                 />
                 <rect x={x + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
                 <rect x={x + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />
@@ -110,12 +118,10 @@ export function Board({ view }: BoardProps) {
           }
 
           return (
-            <g key={idx} opacity={inBuffer ? 0.5 : 1}>
+            <g key={idx} opacity={inBuffer ? 0.4 : 1}>
               <rect
                 x={x} y={svgY} width={1} height={1}
-                fill={color}
-                stroke={dark}
-                strokeWidth={0.06}
+                fill={color} stroke={dark} strokeWidth={0.06}
               />
               {!inBuffer && (
                 <>
@@ -135,7 +141,6 @@ export function Board({ view }: BoardProps) {
             x={activePiece.x}
             y={ghostY}
             visibleHeight={h}
-            totalHeight={TOTAL_H}
             ghost
           />
         )}
@@ -148,11 +153,10 @@ export function Board({ view }: BoardProps) {
             x={activePiece.x}
             y={activePiece.y}
             visibleHeight={h}
-            totalHeight={TOTAL_H}
           />
         )}
 
-        {/* Playfield border (top layer) */}
+        {/* Playfield border (only around the 20 visible rows) */}
         <rect
           x={0} y={0} width={w} height={h}
           fill="none"
@@ -170,7 +174,6 @@ function ActivePieceCells({
   x: px,
   y: py,
   visibleHeight,
-  totalHeight,
   ghost,
 }: {
   piece: Piece;
@@ -178,7 +181,6 @@ function ActivePieceCells({
   x: number;
   y: number;
   visibleHeight: number;
-  totalHeight: number;
   ghost?: boolean;
 }) {
   const cells = PIECE_CELLS[piece]![rotation]!;
@@ -191,11 +193,13 @@ function ActivePieceCells({
       {cells.map((cell, i) => {
         const bx = px + cell.x;
         const by = py + cell.y;
-        if (by < 0 || by >= totalHeight || bx < 0 || bx >= BOARD_WIDTH) return null;
+        if (by < 0 || bx < 0 || bx >= BOARD_WIDTH) return null;
         const svgY = visibleHeight - 1 - by;
+        if (svgY < SVG_Y_START) return null;
+        const inBuffer = by >= visibleHeight;
 
         return (
-          <g key={i}>
+          <g key={i} opacity={inBuffer ? 0.5 : 1}>
             <rect
               x={bx} y={svgY} width={1} height={1}
               fill={ghost ? 'transparent' : color}
@@ -203,7 +207,7 @@ function ActivePieceCells({
               strokeWidth={ghost ? 0.08 : 0.06}
               opacity={ghost ? 0.3 : 1}
             />
-            {!ghost && (
+            {!ghost && !inBuffer && (
               <>
                 <rect x={bx + 0.05} y={svgY + 0.05} width={0.4} height={0.12} fill={light} opacity={0.6} />
                 <rect x={bx + 0.05} y={svgY + 0.05} width={0.12} height={0.4} fill={light} opacity={0.6} />

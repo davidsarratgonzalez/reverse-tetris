@@ -54,7 +54,7 @@ export interface GameConfig {
 export const DEFAULT_CONFIG: GameConfig = {
   width: 10,
   height: 20,
-  bufferRows: 4,
+  bufferRows: 20, // Guideline: 20 buffer rows above visible area (total 40)
   previewCount: 5,
   randomizer: 'bag7',
   allowHold: true,
@@ -69,6 +69,7 @@ export interface LockResult {
 
 export interface GameSnapshot {
   board: import('./board.js').Board;
+  height: number; // visible playfield height (without buffer rows)
   currentPiece: Piece;
   holdPiece: Piece | null;
   holdUsed: boolean;
