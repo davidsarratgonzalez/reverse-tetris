@@ -9,9 +9,15 @@ interface PieceSelectorProps {
   onPick: (piece: Piece) => void;
   disabled: boolean;
   label?: string;
+  preselected?: Piece | null;
 }
 
-export function PieceSelector({ onPick, disabled, label }: PieceSelectorProps) {
+export function PieceSelector({ onPick, disabled, label, preselected }: PieceSelectorProps) {
+  const pickRandom = () => {
+    const piece = ALL_PIECES[Math.floor(Math.random() * ALL_PIECES.length)]!;
+    onPick(piece);
+  };
+
   return (
     <div className="piece-selector nes-panel">
       {label && <span className="nes-label">{label}</span>}
@@ -19,7 +25,7 @@ export function PieceSelector({ onPick, disabled, label }: PieceSelectorProps) {
         {ALL_PIECES.map((piece) => (
           <button
             key={piece}
-            className="selector-btn"
+            className={`selector-btn ${preselected === piece ? 'selector-btn--preselected' : ''}`}
             onClick={() => onPick(piece)}
             disabled={disabled}
             title={`Pick ${PIECE_NAMES[piece]}`}
@@ -30,6 +36,14 @@ export function PieceSelector({ onPick, disabled, label }: PieceSelectorProps) {
             <PieceShape piece={piece} cellSize={SELECTOR_CELL_SIZE} />
           </button>
         ))}
+        <button
+          className="selector-btn selector-btn--random"
+          onClick={pickRandom}
+          disabled={disabled}
+          title="Pick random piece"
+        >
+          <span className="selector-random-label">?</span>
+        </button>
       </div>
     </div>
   );

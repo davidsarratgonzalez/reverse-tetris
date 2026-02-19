@@ -13,7 +13,7 @@ import './styles/selector.css';
 import './styles/input-display.css';
 
 export function App() {
-  const { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed } = useGameLoop();
+  const { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed, preselected } = useGameLoop();
 
   if (view.phase === 'START_SCREEN') {
     return <StartScreen onStart={onStart} />;
@@ -21,7 +21,10 @@ export function App() {
 
   const canPick =
     view.phase === 'PICKING' ||
-    view.phase === 'WAITING_FOR_PLAYER';
+    view.phase === 'WAITING_FOR_PLAYER' ||
+    view.phase === 'BOT_THINKING' ||
+    view.phase === 'BOT_ANIMATING' ||
+    view.phase === 'LINE_CLEARING';
 
   const selectorLabel =
     view.phase === 'PICKING'
@@ -91,6 +94,7 @@ export function App() {
           onPick={onPickPiece}
           disabled={!canPick}
           label={selectorLabel}
+          preselected={preselected}
         />
       </div>
 

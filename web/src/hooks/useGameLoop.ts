@@ -39,6 +39,7 @@ export interface GameControls {
   onMenu: () => void;
   speed: number;
   setSpeed: (s: number) => void;
+  preselected: Piece | null;
 }
 
 function frameDelay(type: AnimationKeyframe['type']): number {
@@ -56,12 +57,15 @@ export function useGameLoop(): GameControls {
   const engineRefs = useRef<EngineRefs>(createEngineRefs());
   const [view, setView] = useState<ViewState>(createInitialView);
   const [speed, setSpeed] = useState(0.5);
+  const [preselected, setPreselected] = useState<Piece | null>(null);
 
   // "Latest value" refs for use inside async callbacks
   const viewRef = useRef(view);
   viewRef.current = view;
   const speedRef = useRef(speed);
   speedRef.current = speed;
+  const preselectedRef = useRef(preselected);
+  preselectedRef.current = preselected;
 
   // Generation counter — incremented on cancel/restart to invalidate stale callbacks
   const genRef = useRef(0);
@@ -290,6 +294,15 @@ export function useGameLoop(): GameControls {
     return () => clearTimeout(id);
   }, [view.phase, startAnimLoop]);
 
+  // Auto-apply preselected piece when transitioning to WAITING_FOR_PLAYER
+  useEffect(() => {
+    if (view.phase === 'WAITING_FOR_PLAYER' && preselectedRef.current !== null) {
+      const piece = preselectedRef.current;
+      setPreselected(null);
+      setView(pickNextPiece(engineRefs.current, piece, view.scoreState, view.piecesPlaced));
+    }
+  }, [view.phase]);
+
   // Cleanup on unmount
   useEffect(() => cancelAll, [cancelAll]);
 
@@ -302,14 +315,20 @@ export function useGameLoop(): GameControls {
   const onPickPiece = useCallback((piece: Piece) => {
     const v = viewRef.current;
     if (v.phase === 'PICKING') {
+      setPreselected(null);
       setView(pickPiece(engineRefs.current, piece, v));
     } else if (v.phase === 'WAITING_FOR_PLAYER') {
+      setPreselected(null);
       setView(pickNextPiece(engineRefs.current, piece, v.scoreState, v.piecesPlaced));
+    } else {
+      // Pre-select during bot phases (toggle off if same piece)
+      setPreselected(prev => prev === piece ? null : piece);
     }
   }, []);
 
   const onReset = useCallback(() => {
     cancelAll();
+    setPreselected(null);
     const mc = engineRefs.current.modeConfig;
     if (!mc) return;
     engineRefs.current = createEngineRefs();
@@ -318,9 +337,10 @@ export function useGameLoop(): GameControls {
 
   const onMenu = useCallback(() => {
     cancelAll();
+    setPreselected(null);
     engineRefs.current = createEngineRefs();
     setView(createInitialView());
   }, [cancelAll]);
 
-  return { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed };
+  return { view, onStart, onPickPiece, onReset, onMenu, speed, setSpeed, preselected };
 }

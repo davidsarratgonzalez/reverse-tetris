@@ -41,6 +41,26 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+.selector-btn--preselected {
+  border-color: var(--piece-color, var(--border-color));
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 0 10px var(--piece-color, var(--border-color)),
+    inset 0 0 12px rgba(255, 255, 255, 0.08);
+  transform: scale(1.08);
+  animation: preselect-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes preselect-pulse {
+  0%, 100% { background: rgba(255, 255, 255, 0.25); }
+  50% { background: rgba(255, 255, 255, 0.35); }
+}
+
+.selector-random-label {
+  font-size: 20px;
+  color: var(--text-secondary);
+}
+
 .selector-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
